@@ -1,0 +1,4 @@
+/dist/
+/.venv/
+/src/cdp_bridge.egg-info/
+/.idea/

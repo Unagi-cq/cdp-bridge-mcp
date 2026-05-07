@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cdp-bridge"
+version = "0.1.0"
+description = "MCP server that bridges clients to a real browser through CDP and a companion extension."
+readme = "README.md"
+requires-python = ">=3.12"
+keywords = ["mcp", "browser", "cdp", "automation"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "beautifulsoup4>=4.14.3",
+    "bottle>=0.13.4",
+    "mcp>=1.27.0",
+    "requests>=2.33.1",
+    "simple-websocket-server>=0.4.4",
+]
+
+[project.scripts]
+cdp-bridge = "cdp_bridge:main"
+cdp-bridge-extension-path = "cdp_bridge:extension_path"
+
+[project.urls]
+Homepage = "https://github.com/Unagi-cq/cdp-bridge-mcp"
+Repository = "https://github.com/Unagi-cq/cdp-bridge-mcp"
+Issues = "https://github.com/Unagi-cq/cdp-bridge-mcp/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+cdp_bridge = ["tmwd_cdp_bridge/*"]
