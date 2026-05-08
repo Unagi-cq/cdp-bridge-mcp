@@ -131,6 +131,29 @@ codex mcp add cdp-bridge uvx cdp-bridge@latest
 
 ```
 
+### OpenClaw
+
+可以使用 OpenClaw CLI 写入 MCP 配置：
+
+```bash
+openclaw mcp set cdp-bridge '{"command":"uvx","args":["cdp-bridge@latest"]}'
+```
+
+等价配置结构如下：
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "cdp-bridge": {
+        "command": "uvx",
+        "args": ["cdp-bridge@latest"]
+      }
+    }
+  }
+}
+```
+
 ### 注意事项
 
 - 本项目需要 Python 3.10 或更高版本。

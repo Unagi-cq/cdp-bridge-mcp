@@ -136,6 +136,29 @@ Configure it in `~/.config/opencode/opencode.json`:
 }
 ```
 
+### OpenClaw
+
+You can write the MCP configuration with the OpenClaw CLI:
+
+```bash
+openclaw mcp set cdp-bridge '{"command":"uvx","args":["cdp-bridge@latest"]}'
+```
+
+Equivalent configuration shape:
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "cdp-bridge": {
+        "command": "uvx",
+        "args": ["cdp-bridge@latest"]
+      }
+    }
+  }
+}
+```
+
 ### Notes
 
 - This project requires Python 3.10 or newer.
