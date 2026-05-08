@@ -137,3 +137,7 @@ Configure it in `~/.config/opencode/opencode.json`:
 - This project requires Python 3.12 or newer.
 - The browser extension and MCP server must run at the same time. Otherwise, the tools will report that no browser tabs are connected.
 - Browser automation runs in your real browser session, so only connect MCP clients that you trust.
+
+## Acknowledgements
+
+The browser extension and parts of the code in this project are based on and adapted from [GenericAgent](https://github.com/lsdefine/GenericAgent). Thanks to the original author for the open-source work.

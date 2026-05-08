@@ -76,13 +76,11 @@ MCP Server 当前暴露以下工具：
 
 第一步，电脑上安装 `uv`。
 
-> uvx 是在 uv 的 0.2.0 版本中才正式引入的。 如果你安装的 uv 版本低于 0.2.0，那么系统中就没有 uvx 这个命令。在旧版本中，类似的功能可能需要通过 uv tool run 来实现（这也是 uvx 的底层实现方式）。
-
 ### 脚本测试
 
 ```bash
-uvx cdp-bridge # uv >= 0.2.0
-uv tool run # uv < 0.2.0
+uvx cdp-bridge@latest
+uv tool run cdp-bridge@latest # uvx不可用时
 ```
 ### 标准配置
 在 MCP 客户端中可以这样配置：
@@ -91,7 +89,7 @@ uv tool run # uv < 0.2.0
   "mcpServers": {
     "cdp-bridge": {
       "command": "uvx",
-      "args": ["cdp-bridge"]
+      "args": ["cdp-bridge@latest"]
     }
   }
 }
@@ -100,13 +98,13 @@ uv tool run # uv < 0.2.0
 ### Claude Code
 
 ```bash
-claude mcp add cdp-bridge uvx cdp-bridge
+claude mcp add cdp-bridge uvx cdp-bridge@latest
 ```
 
 ### Codex
 
 ```bash
-codex mcp add cdp-bridge uvx cdp-bridge
+codex mcp add cdp-bridge uvx cdp-bridge@latest
 ```
 
 ### opencode
@@ -120,7 +118,7 @@ codex mcp add cdp-bridge uvx cdp-bridge
       "type": "local",
       "command": [
         "uvx",
-        "cdp-bridge"
+        "cdp-bridge@latest"
       ],
       "enabled": true
     }
@@ -134,3 +132,7 @@ codex mcp add cdp-bridge uvx cdp-bridge
 - 本项目需要 Python 3.12 或更高版本。
 - 浏览器扩展需要和 MCP Server 同时运行，否则工具会提示没有连接的浏览器标签页。
 - 页面自动化会运行在你的真实浏览器会话中，请只连接你信任的 MCP 客户端。
+
+## 致谢
+
+本项目的浏览器插件和部分代码参考并来源于 [GenericAgent](https://github.com/lsdefine/GenericAgent)。感谢原项目作者的开源工作。
