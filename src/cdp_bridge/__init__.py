@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 
 from .server import mcp
 
@@ -14,7 +15,8 @@ def main():
 
 def extension_path():
     """Print the packaged Chrome extension directory."""
-    print("src/cdp_bridge/tmwd_cdp_bridge")
+    extension_dir = Path(__file__).resolve().parent / "tmwd_cdp_bridge"
+    print(extension_dir)
 
 
 if __name__ == "__main__":
