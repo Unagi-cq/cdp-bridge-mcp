@@ -14,72 +14,31 @@ CDP Bridge MCP 是一个连接 MCP 客户端与真实浏览器会话的桥接服
 </p>
 
 <p align="center">
-<a href="#中文说明">中文</a> | <a href="#english">English</a>
+中文 | <a href="./doc/README_EN.md">English</a>
 </p>
 
-## 中文说明
+# 项目介绍
 
-### 项目介绍
-
-CDP Bridge MCP 适合需要让大模型操作真实浏览器的场景。和无状态 HTTP 抓取不同，它连接的是你已经登录、已经打开的浏览器页面，因此可以复用真实浏览器里的登录态、Cookie、页面状态和前端渲染结果。
-
-项目由两部分组成：
-
-- **MCP Server**：Python 包，发布到 PyPI 后可通过 `uvx cdp-bridge` 启动。
-- **浏览器扩展**：随 Python 包一起发布，用于把 Chromium 标签页连接到本地 MCP Server。
+CDP Bridge MCP 适合需要让大模型操作真实浏览器的场景。**和无状态 HTTP 抓取不同，它连接的是你已经登录、已经打开的浏览器页面，因此可以复用真实浏览器里的登录态、Cookie、页面状态和前端渲染结果。**
 
 代码仓库：<https://github.com/Unagi-cq/cdp-bridge-mcp>
 
-### 功能
+> 本项目以Python语言编写并发布。 
 
-- 标签页管理：获取当前已连接浏览器标签页列表，并切换活动标签页。
-- 页面扫描：提取当前页面的简化 HTML 或纯文本内容，减少无关脚本、样式和隐藏元素。
-- JavaScript 执行：在真实页面上下文中执行 JavaScript，并返回执行结果。
-- 页面导航：控制活动标签页跳转到指定 URL。
-- 页面截图：通过 CDP 截取当前页面 PNG，并返回 base64 数据。
-- Cookie 读取：读取当前页面或指定 URL 的 Cookie。
-- 真实会话复用：可使用浏览器中已有登录态，适合需要账号态页面的自动化和检索场景。
+## 为什么用 CDP Bridge MCP ?
 
-### 安装与启动
+**为什么用 CDP Bridge MCP 而不是 playwright MCP 或者 chrome devtools MCP ？**
 
-安装 `uv` 后，发布到 PyPI 的版本可以直接用 `uvx` 启动：
+Playwright MCP 和 Chrome DevTools MCP 都很强，但它们更偏向“自动化测试 / 调试协议 / 新开浏览器实例”的工作流。CDP Bridge MCP 的目标不同：它更关注让 LLM 直接接管你正在使用的真实浏览器会话。
 
-```bash
-uvx cdp-bridge
-```
+- **复用真实登录态**：CDP Bridge MCP 连接的是你已经打开、已经登录的浏览器标签页，可以直接使用现有 Cookie、登录状态、页面上下文和前端渲染结果。很多需要账号态的网站，不需要重新登录或额外搬运 Cookie。
+- **更适合日常浏览器协作**：Playwright 更适合可重复、可脚本化的自动化流程，而 CDP Bridge MCP 更适合 LLM 在用户当前页面上做读取、分析、点击前判断、执行脚本、截图等交互式任务。
+- **页面内容更适合 LLM 消费**：`browser_scan` 会对页面 HTML 做简化，过滤脚本、样式和不可见元素，尽量保留对模型有用的正文、控件和结构信息，减少 token 浪费。
+- **启动链路轻量**：服务端发布到 PyPI 后可直接 `uvx cdp-bridge` 启动，浏览器端加载扩展即可连接，不需要编写 Playwright 脚本，也不需要为每个浏览器实例单独配置调试参数。
 
-在 MCP 客户端中可以这样配置：
+如果你的目标是“让模型控制一个专门启动的自动化浏览器”，Playwright MCP 很合适；如果你的目标是“调试 Chrome 或精细操作 DevTools 协议”，Chrome DevTools MCP 很合适；如果你的目标是“让模型读取和操作我当前正在使用的真实浏览器页面”，CDP Bridge MCP 更贴近这个场景。
 
-```json
-{
-  "mcpServers": {
-    "cdp-bridge": {
-      "command": "uvx",
-      "args": ["cdp-bridge"]
-    }
-  }
-}
-```
-
-### 加载浏览器扩展
-
-浏览器扩展已经包含在 Python 包内。安装或通过 `uvx` 使用后，可以打印扩展目录：
-
-```bash
-uvx --from cdp-bridge cdp-bridge-extension-path
-```
-
-然后在 Chrome 或其他 Chromium 浏览器中加载：
-
-1. 打开 `chrome://extensions/`。
-2. 开启“开发者模式”。
-3. 点击“加载已解压的扩展程序”。
-4. 选择 `cdp-bridge-extension-path` 输出的目录。
-5. 启动 MCP Server 后，刷新需要操作的网页。
-
-默认情况下，扩展会连接本地服务地址 `127.0.0.1:18765`。
-
-### 可用工具
+## 可用工具
 
 MCP Server 当前暴露以下工具：
 
@@ -93,79 +52,40 @@ MCP Server 当前暴露以下工具：
 | `browser_screenshot` | 获取页面截图 |
 | `browser_cookies` | 读取 Cookie |
 
-### 本地开发
+# 如何使用
 
-克隆仓库：
+## 安装步骤
 
-```bash
-git clone git@github.com:Unagi-cq/cdp-bridge-mcp.git
-cd cdp-bridge-mcp
-```
+1. 将项目中提供的浏览器插件 `src/cdp_bridge/tmwd_cdp_bridge` 文件夹加载到 Chrome 或其他 Chromium 浏览器
+2. 在MCP客户端配置CDP Bridge MCP
 
-从源码运行：
+然后就可以正常使用了。下面详细介绍上述安装步骤。
 
-```bash
-uv run cdp-bridge
-```
+## 加载浏览器
 
-构建发布包：
+在 Chrome 或其他 Chromium 浏览器中加载：
 
-```bash
-uv build
-```
+1. 打开 `chrome://extensions/`。
+2. 开启“开发者模式”。
+3. 点击“加载已解压的扩展程序”。
+4. 选择 `src/cdp_bridge/tmwd_cdp_bridge` 文件夹。
 
-检查发布包：
+默认情况下，扩展会连接本地服务地址 `127.0.0.1:18765`。
 
-```bash
-uvx twine check dist/*
-```
+## 配置 MCP
 
-发布到 PyPI：
+第一步，电脑上安装 `uv`。
 
-```bash
-uv publish
-```
+> uvx 是在 uv 的 0.2.0 版本中才正式引入的。 如果你安装的 uv 版本低于 0.2.0，那么系统中就没有 uvx 这个命令。在旧版本中，类似的功能可能需要通过 uv tool run 来实现（这也是 uvx 的底层实现方式）。
 
-### 注意事项
-
-- 本项目需要 Python 3.12 或更高版本。
-- 浏览器扩展需要和 MCP Server 同时运行，否则工具会提示没有连接的浏览器标签页。
-- 页面自动化会运行在你的真实浏览器会话中，请只连接你信任的 MCP 客户端。
-- 如果修改了扩展文件，重新构建包前请确认 `src/cdp_bridge/tmwd_cdp_bridge` 中的文件已经更新。
-
-## English
-
-### Introduction
-
-CDP Bridge MCP is an MCP server for connecting model clients to real browser sessions. Instead of fetching pages as stateless HTTP documents, it works with tabs already open in your Chromium-based browser, so the model can use existing login state, cookies, rendered DOM, and live page context.
-
-The project has two parts:
-
-- **MCP Server**: a Python package that can be launched with `uvx cdp-bridge` after publishing to PyPI.
-- **Browser extension**: a packaged Chromium extension that connects browser tabs to the local MCP server.
-
-Repository: <https://github.com/Unagi-cq/cdp-bridge-mcp>
-
-### Features
-
-- Tab management: list connected browser tabs and switch the active tab.
-- Page scanning: extract simplified HTML or plain text from the active page.
-- JavaScript execution: run JavaScript in the real page context.
-- Navigation: navigate the active tab to a target URL.
-- Screenshots: capture a PNG screenshot through CDP and return base64 data.
-- Cookie access: read cookies for the current page or a specific URL.
-- Real session reuse: operate on pages with your existing browser login state.
-
-### Install and Run
-
-After installing `uv`, the PyPI package can be launched with:
+### 脚本测试
 
 ```bash
-uvx cdp-bridge
+uvx cdp-bridge # uv >= 0.2.0
+uv tool run # uv < 0.2.0
 ```
-
-Example MCP client configuration:
-
+### 标准配置
+在 MCP 客户端中可以这样配置：
 ```json
 {
   "mcpServers": {
@@ -177,74 +97,40 @@ Example MCP client configuration:
 }
 ```
 
-### Load the Browser Extension
-
-The Chromium extension is included in the Python package. Print its local path with:
+### Claude Code
 
 ```bash
-uvx --from cdp-bridge cdp-bridge-extension-path
+claude mcp add cdp-bridge uvx cdp-bridge
 ```
 
-Then load it in Chrome or another Chromium-based browser:
-
-1. Open `chrome://extensions/`.
-2. Enable Developer mode.
-3. Click "Load unpacked".
-4. Select the directory printed by `cdp-bridge-extension-path`.
-5. Start the MCP server and refresh the page you want to operate on.
-
-By default, the extension connects to `127.0.0.1:18765`.
-
-### Tools
-
-The MCP server exposes these tools:
-
-| Tool | Description |
-| --- | --- |
-| `browser_get_tabs` | List connected browser tabs |
-| `browser_scan` | Scan the active page as simplified HTML or plain text |
-| `browser_execute_js` | Execute JavaScript in the active tab |
-| `browser_switch_tab` | Switch the active tab |
-| `browser_navigate` | Navigate the active tab to a URL |
-| `browser_screenshot` | Capture a page screenshot |
-| `browser_cookies` | Read cookies |
-
-### Development
-
-Clone the repository:
+### Codex
 
 ```bash
-git clone git@github.com:Unagi-cq/cdp-bridge-mcp.git
-cd cdp-bridge-mcp
+codex mcp add cdp-bridge uvx cdp-bridge
 ```
 
-Run from source:
+### opencode
+在`~/.config/opencode/opencode.json`里面配置：
 
-```bash
-uv run cdp-bridge
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "cdp-bridge": {
+      "type": "local",
+      "command": [
+        "uvx",
+        "cdp-bridge"
+      ],
+      "enabled": true
+    }
+  }
+}
+
 ```
 
-Build the package:
+### 注意事项
 
-```bash
-uv build
-```
-
-Check the distribution files:
-
-```bash
-uvx twine check dist/*
-```
-
-Publish to PyPI:
-
-```bash
-uv publish
-```
-
-### Notes
-
-- Python 3.12 or newer is required.
-- The browser extension and MCP server must run at the same time.
-- Browser automation runs in your real browser session, so only connect clients you trust.
-- If extension files are changed, make sure `src/cdp_bridge/tmwd_cdp_bridge` is updated before building the package.
+- 本项目需要 Python 3.12 或更高版本。
+- 浏览器扩展需要和 MCP Server 同时运行，否则工具会提示没有连接的浏览器标签页。
+- 页面自动化会运行在你的真实浏览器会话中，请只连接你信任的 MCP 客户端。

@@ -1,0 +1,139 @@
+<h1 align="center">CDP Bridge MCP</h1>
+
+<div align="center">
+
+[![PyPI](https://img.shields.io/pypi/v/cdp-bridge?label=PyPI)](https://pypi.org/project/cdp-bridge/)
+[![Python](https://img.shields.io/badge/Python-3.12%2B-blue)](https://www.python.org/)
+[![MCP](https://img.shields.io/badge/MCP-Browser%20Bridge-green)](https://modelcontextprotocol.io/)
+[![GitHub](https://img.shields.io/badge/GitHub-Unagi--cq%2Fcdp--bridge--mcp-black)](https://github.com/Unagi-cq/cdp-bridge-mcp)
+
+</div>
+
+<p align="center">
+CDP Bridge MCP is a bridge service that connects MCP clients to real browser sessions. Through its companion Chromium extension, model clients can access browser pages, list tabs, scan page content, execute JavaScript, capture screenshots, navigate pages, and read cookies.
+</p>
+
+<p align="center">
+<a href="../README.md">中文</a> | English
+</p>
+
+# Introduction
+
+CDP Bridge MCP is designed for scenarios where large language models need to work with a real browser. **Unlike stateless HTTP fetching, it connects to browser pages that are already open and already logged in, so it can reuse the browser's login state, cookies, page state, and rendered frontend result.**
+
+Repository: <https://github.com/Unagi-cq/cdp-bridge-mcp>
+
+> This project is written and distributed in Python.
+
+## Why CDP Bridge MCP?
+
+**Why use CDP Bridge MCP instead of Playwright MCP or Chrome DevTools MCP?**
+
+Playwright MCP and Chrome DevTools MCP are both powerful, but they are more oriented toward workflows such as automated testing, debugging protocols, or newly launched browser instances. CDP Bridge MCP has a different goal: it focuses on letting an LLM directly work with the real browser session you are already using.
+
+- **Reuse real login state**: CDP Bridge MCP connects to browser tabs that are already open and logged in. It can directly use existing cookies, login state, page context, and rendered frontend output. For many account-based websites, there is no need to log in again or manually transfer cookies.
+- **Better for everyday browser collaboration**: Playwright is a strong fit for repeatable and scriptable automation workflows. CDP Bridge MCP is better suited for interactive tasks on the user's current page, such as reading, analyzing, checking before clicking, executing scripts, and taking screenshots.
+- **Page content is optimized for LLMs**: `browser_scan` simplifies page HTML by filtering scripts, styles, and invisible elements while keeping useful text, controls, and structure, reducing token waste.
+- **Lightweight startup flow**: Once published to PyPI, the server can be started with `uvx cdp-bridge`. The browser side only needs the extension to be loaded. There is no need to write Playwright scripts or configure debug parameters for each browser instance.
+
+If your goal is to let a model control a dedicated automation browser, Playwright MCP is a good fit. If your goal is to debug Chrome or work closely with the DevTools protocol, Chrome DevTools MCP is a good fit. If your goal is to let a model read and operate on the real browser page you are currently using, CDP Bridge MCP is closer to that scenario.
+
+## Available Tools
+
+The MCP server currently exposes these tools:
+
+| Tool | Description |
+| --- | --- |
+| `browser_get_tabs` | Get the list of connected browser tabs |
+| `browser_scan` | Scan the active page as simplified HTML or plain text |
+| `browser_execute_js` | Execute JavaScript in the active tab |
+| `browser_switch_tab` | Switch the active tab |
+| `browser_navigate` | Navigate the active tab to a URL |
+| `browser_screenshot` | Capture a page screenshot |
+| `browser_cookies` | Read cookies |
+
+# Usage
+
+## Installation Steps
+
+1. Load the browser extension folder `src/cdp_bridge/tmwd_cdp_bridge` into Chrome or another Chromium-based browser.
+2. Configure CDP Bridge MCP in your MCP client.
+
+After that, the MCP server can be used normally. The detailed steps are listed below.
+
+## Load the Browser Extension
+
+In Chrome or another Chromium-based browser:
+
+1. Open `chrome://extensions/`.
+2. Enable "Developer mode".
+3. Click "Load unpacked".
+4. Select the `src/cdp_bridge/tmwd_cdp_bridge` folder.
+
+By default, the extension connects to the local service at `127.0.0.1:18765`.
+
+## Configure MCP
+
+First, install `uv` on your computer.
+
+> `uvx` was officially introduced in uv 0.2.0. If your uv version is lower than 0.2.0, the `uvx` command may not be available. In older versions, similar functionality can be used through `uv tool run`, which is also the underlying behavior of `uvx`.
+
+### Script Test
+
+```bash
+uvx cdp-bridge # uv >= 0.2.0
+uv tool run # uv < 0.2.0
+```
+
+### Standard Configuration
+
+You can configure it in an MCP client like this:
+
+```json
+{
+  "mcpServers": {
+    "cdp-bridge": {
+      "command": "uvx",
+      "args": ["cdp-bridge"]
+    }
+  }
+}
+```
+
+### Claude Code
+
+```bash
+claude mcp add cdp-bridge uvx cdp-bridge
+```
+
+### Codex
+
+```bash
+codex mcp add cdp-bridge uvx cdp-bridge
+```
+
+### opencode
+
+Configure it in `~/.config/opencode/opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "cdp-bridge": {
+      "type": "local",
+      "command": [
+        "uvx",
+        "cdp-bridge"
+      ],
+      "enabled": true
+    }
+  }
+}
+```
+
+### Notes
+
+- This project requires Python 3.12 or newer.
+- The browser extension and MCP server must run at the same time. Otherwise, the tools will report that no browser tabs are connected.
+- Browser automation runs in your real browser session, so only connect MCP clients that you trust.
