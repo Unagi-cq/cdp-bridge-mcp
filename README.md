@@ -129,7 +129,7 @@ codex mcp add cdp-bridge uvx cdp-bridge@latest
 
 ### 注意事项
 
-- 本项目需要 Python 3.12 或更高版本。
+- 本项目需要 Python 3.10 或更高版本。
 - 浏览器扩展需要和 MCP Server 同时运行，否则工具会提示没有连接的浏览器标签页。
 - 页面自动化会运行在你的真实浏览器会话中，请只连接你信任的 MCP 客户端。
 

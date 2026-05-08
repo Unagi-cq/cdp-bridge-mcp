@@ -134,7 +134,7 @@ Configure it in `~/.config/opencode/opencode.json`:
 
 ### Notes
 
-- This project requires Python 3.12 or newer.
+- This project requires Python 3.10 or newer.
 - The browser extension and MCP server must run at the same time. Otherwise, the tools will report that no browser tabs are connected.
 - Browser automation runs in your real browser session, so only connect MCP clients that you trust.
 
