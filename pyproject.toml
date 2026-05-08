@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cdp-bridge"
-version = "0.1.5"
+version = "0.1.6"
 description = "MCP server that bridges clients to a real browser through CDP and a companion extension."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -52,3 +52,6 @@ include = ["cdp_bridge", "cdp_bridge.*"]
 
 [tool.setuptools.package-data]
 cdp_bridge = ["tmwd_cdp_bridge/*.js", "tmwd_cdp_bridge/*.html", "tmwd_cdp_bridge/*.json"]
+
+[tool.setuptools.data-files]
+"share/cdp-bridge/doc" = ["doc/tmwebdriver_sop.md", "doc/vue3_component_sop.md"]

@@ -55,6 +55,7 @@ The MCP server currently exposes these tools:
 | `browser_navigate` | Navigate the active tab to a URL |
 | `browser_screenshot` | Capture a page screenshot |
 | `browser_cookies` | Read cookies |
+| `browser_get_sop` | Read a bundled SOP. Supported values: `tmwebdriver` and `vue3_component`. The model should load it when CDP commands, iframes, screenshots, cookies, downloads, autofill, file upload, or Vue 3 custom components need task-specific guidance; if the relevant SOP was already loaded in the same task, it should not be loaded again |
 
 # Usage
 

@@ -1,5 +1,7 @@
 import asyncio, json
 import importlib
+import importlib.metadata
+from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
@@ -9,12 +11,64 @@ mcp = FastMCP("tmwebdriver-bridge")
 
 driver = None
 
+SOP_FILES = {
+    "tmwebdriver": "tmwebdriver_sop.md",
+    "vue3_component": "vue3_component_sop.md",
+}
+
+
+def read_sop(name: str) -> str:
+    normalized = name.strip().lower().replace("-", "_")
+    filename = SOP_FILES.get(normalized)
+    if not filename:
+        available = ", ".join(sorted(SOP_FILES))
+        return f"Unknown SOP: {name}. Available SOPs: {available}"
+
+    candidates = [
+        Path(__file__).resolve().parents[2] / "doc" / filename,
+        Path(__file__).resolve().parent / "sops" / filename,
+    ]
+
+    for path in candidates:
+        if path.exists():
+            return path.read_text(encoding="utf-8")
+
+    try:
+        distribution = importlib.metadata.distribution("cdp-bridge")
+        for file in distribution.files or []:
+            file_path = str(file)
+            if file_path.endswith(f"share/cdp-bridge/doc/{filename}") or file_path.endswith(f"doc/{filename}"):
+                located = distribution.locate_file(file)
+                return Path(located).read_text(encoding="utf-8")
+    except importlib.metadata.PackageNotFoundError:
+        pass
+
+    return f"SOP file not found: {filename}"
+
 def get_driver():
     global driver
     if driver is None:
         from .TMWebDriver import TMWebDriver
         driver = TMWebDriver()
     return driver
+
+
+@mcp.tool()
+async def browser_get_sop(name: str = "tmwebdriver") -> str:
+    """Read a bundled SOP for browser automation guidance.
+
+    Use this tool when the task involves browser automation details that may need
+    project-specific guidance, such as CDP JSON commands, iframe handling,
+    screenshots, cookies, downloads, autofill, file upload, or Vue 3 custom
+    components. Load the relevant SOP before attempting a risky or unfamiliar
+    operation. If the relevant SOP has already been loaded in the current task,
+    do not call this tool again unless the user asks to re-check it or the task
+    context changed enough that the SOP content may be needed again.
+
+    Args:
+        name: SOP name. Supported values: tmwebdriver, vue3_component.
+    """
+    return read_sop(name)
 
 
 @mcp.tool()
