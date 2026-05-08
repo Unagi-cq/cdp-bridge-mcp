@@ -1,9 +1,13 @@
+<p align="center">
+  <img src="../images/icon.png" alt="CDP Bridge MCP Icon" width="120" height="120" />
+</p>
+
 <h1 align="center">CDP Bridge MCP</h1>
 
 <div align="center">
 
 [![PyPI](https://img.shields.io/pypi/v/cdp-bridge?label=PyPI)](https://pypi.org/project/cdp-bridge/)
-[![Python](https://img.shields.io/badge/Python-3.12%2B-blue)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
 [![MCP](https://img.shields.io/badge/MCP-Browser%20Bridge-green)](https://modelcontextprotocol.io/)
 [![GitHub](https://img.shields.io/badge/GitHub-Unagi--cq%2Fcdp--bridge--mcp-black)](https://github.com/Unagi-cq/cdp-bridge-mcp)
 
