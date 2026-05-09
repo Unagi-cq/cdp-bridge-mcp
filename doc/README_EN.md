@@ -26,10 +26,10 @@ CDP Bridge MCP is a bridge service that connects MCP clients to real browser ses
 <table>
   <tr>
     <td width="50%">
-      <video src="./查询小红书平台Anthropic最新动态.mp4" controls width="100%"></video>
+      <iframe src="//player.bilibili.com/player.html?isOutside=true&aid=116543333670350&bvid=BV1RDRQBrEY7&cid=38208012791&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
     </td>
     <td width="50%">
-      <video src="./读取CSDN网站作者后台数据分析.mp4" controls width="100%"></video>
+      <iframe src="//player.bilibili.com/player.html?isOutside=true&aid=116543333670350&bvid=BV1RDRQBrEY7&cid=38208012791&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
     </td>
   </tr>
 </table>

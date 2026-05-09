@@ -29,7 +29,7 @@ CDP Bridge MCP 是一个连接 MCP 客户端与真实浏览器会话的桥接服
       查询小红书平台Anthropic最新动态
     </td>
     <td width="50%">
-      <video src="./doc/查询小红书平台Anthropic最新动态.mp4" controls width="100%"></video>
+      <iframe src="//player.bilibili.com/player.html?isOutside=true&aid=116543333670350&bvid=BV1RDRQBrEY7&cid=38208012791&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
     </td>
   </tr>
   <tr>
@@ -37,7 +37,7 @@ CDP Bridge MCP 是一个连接 MCP 客户端与真实浏览器会话的桥接服
       读取CSDN网站作者后台数据分析
     </td>
     <td width="50%">
-      <video src="./doc/读取CSDN网站作者后台数据分析.mp4" controls width="100%"></video>
+      <iframe src="//player.bilibili.com/player.html?isOutside=true&aid=116543333670350&bvid=BV1RDRQBrEY7&cid=38208012791&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
     </td>
   </tr>
 </table>
