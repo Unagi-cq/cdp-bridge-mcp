@@ -9,7 +9,8 @@ from . import simphtml
 
 mcp = FastMCP("tmwebdriver-bridge")
 
-driver = None
+from .TMWebDriver import TMWebDriver
+driver = TMWebDriver()
 
 SOP_FILES = {
     "tmwebdriver": "tmwebdriver_sop.md",
@@ -46,10 +47,6 @@ def read_sop(name: str) -> str:
     return f"SOP file not found: {filename}"
 
 def get_driver():
-    global driver
-    if driver is None:
-        from .TMWebDriver import TMWebDriver
-        driver = TMWebDriver()
     return driver
 
 
