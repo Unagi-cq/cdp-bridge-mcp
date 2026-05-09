@@ -1,6 +1,5 @@
 import asyncio, json
 import importlib
-import importlib.metadata
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
@@ -26,23 +25,12 @@ def read_sop(name: str) -> str:
         return f"Unknown SOP: {name}. Available SOPs: {available}"
 
     candidates = [
-        Path(__file__).resolve().parents[2] / "doc" / filename,
-        Path(__file__).resolve().parent / "sops" / filename,
+        Path(__file__).resolve().parent / "sop" / filename,
     ]
 
     for path in candidates:
         if path.exists():
             return path.read_text(encoding="utf-8")
-
-    try:
-        distribution = importlib.metadata.distribution("cdp-bridge")
-        for file in distribution.files or []:
-            file_path = str(file)
-            if file_path.endswith(f"share/cdp-bridge/doc/{filename}") or file_path.endswith(f"doc/{filename}"):
-                located = distribution.locate_file(file)
-                return Path(located).read_text(encoding="utf-8")
-    except importlib.metadata.PackageNotFoundError:
-        pass
 
     return f"SOP file not found: {filename}"
 

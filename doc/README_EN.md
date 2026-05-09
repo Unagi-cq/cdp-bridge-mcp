@@ -21,6 +21,19 @@ CDP Bridge MCP is a bridge service that connects MCP clients to real browser ses
 <a href="../README.md">中文</a> | English
 </p>
 
+## Demo Videos
+
+<table>
+  <tr>
+    <td width="50%">
+      <video src="./查询小红书平台Anthropic最新动态.mp4" controls width="100%"></video>
+    </td>
+    <td width="50%">
+      <video src="./读取CSDN网站作者后台数据分析.mp4" controls width="100%"></video>
+    </td>
+  </tr>
+</table>
+
 # Introduction
 
 CDP Bridge MCP is designed for scenarios where large language models need to work with a real browser. **Unlike stateless HTTP fetching, it connects to browser pages that are already open and already logged in, so it can reuse the browser's login state, cookies, page state, and rendered frontend result.**

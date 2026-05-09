@@ -21,6 +21,27 @@ CDP Bridge MCP 是一个连接 MCP 客户端与真实浏览器会话的桥接服
 中文 | <a href="./doc/README_EN.md">English</a>
 </p>
 
+## 演示视频
+
+<table>
+<tr>
+    <td width="50%">
+      查询小红书平台Anthropic最新动态
+    </td>
+    <td width="50%">
+      <video src="./doc/查询小红书平台Anthropic最新动态.mp4" controls width="100%"></video>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      读取CSDN网站作者后台数据分析
+    </td>
+    <td width="50%">
+      <video src="./doc/读取CSDN网站作者后台数据分析.mp4" controls width="100%"></video>
+    </td>
+  </tr>
+</table>
+
 # 项目介绍
 
 CDP Bridge MCP 适合需要让大模型操作真实浏览器的场景。**和无状态 HTTP 抓取不同，它连接的是你已经登录、已经打开的浏览器页面，因此可以复用真实浏览器里的登录态、Cookie、页面状态和前端渲染结果。**

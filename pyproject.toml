@@ -51,7 +51,4 @@ where = ["src"]
 include = ["cdp_bridge", "cdp_bridge.*"]
 
 [tool.setuptools.package-data]
-cdp_bridge = ["tmwd_cdp_bridge/*.js", "tmwd_cdp_bridge/*.html", "tmwd_cdp_bridge/*.json"]
-
-[tool.setuptools.data-files]
-"share/cdp-bridge/doc" = ["doc/tmwebdriver_sop.md", "doc/vue3_component_sop.md"]
+cdp_bridge = ["tmwd_cdp_bridge/*.js", "tmwd_cdp_bridge/*.html", "tmwd_cdp_bridge/*.json", "sop/*.md"]
