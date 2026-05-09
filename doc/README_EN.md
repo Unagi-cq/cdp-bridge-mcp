@@ -57,11 +57,12 @@ The MCP server currently exposes these tools:
 | `browser_get_tabs` | Get the list of connected browser tabs |
 | `browser_scan` | Scan the active page as simplified HTML or plain text |
 | `browser_execute_js` | Execute JavaScript in the active tab |
-| `browser_switch_tab` | Switch the active tab |
+| `browser_switch_tab` | Switch the active MCP tab without changing the user's visible Chrome tab |
+| `browser_batch` | Run extension/CDP commands in a single request for complex flows |
+| `browser_wait` | Poll a JavaScript condition until it returns a truthy value or times out |
 | `browser_navigate` | Navigate the active tab to a URL |
 | `browser_screenshot` | Capture a page screenshot |
 | `browser_cookies` | Read cookies |
-| `browser_get_sop` | Read a bundled SOP. Supported values: `tmwebdriver` and `vue3_component`. The model should load it when CDP commands, iframes, screenshots, cookies, downloads, autofill, file upload, or Vue 3 custom components need task-specific guidance; if the relevant SOP was already loaded in the same task, it should not be loaded again |
 
 # Usage
 

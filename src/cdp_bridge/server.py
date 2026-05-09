@@ -1,6 +1,6 @@
-import asyncio, json
+import asyncio, json, time
 import importlib
-from pathlib import Path
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
@@ -11,49 +11,29 @@ mcp = FastMCP("tmwebdriver-bridge")
 from .TMWebDriver import TMWebDriver
 driver = TMWebDriver()
 
-SOP_FILES = {
-    "tmwebdriver": "tmwebdriver_sop.md",
-    "vue3_component": "vue3_component_sop.md",
-}
-
-
-def read_sop(name: str) -> str:
-    normalized = name.strip().lower().replace("-", "_")
-    filename = SOP_FILES.get(normalized)
-    if not filename:
-        available = ", ".join(sorted(SOP_FILES))
-        return f"Unknown SOP: {name}. Available SOPs: {available}"
-
-    candidates = [
-        Path(__file__).resolve().parent / "sop" / filename,
-    ]
-
-    for path in candidates:
-        if path.exists():
-            return path.read_text(encoding="utf-8")
-
-    return f"SOP file not found: {filename}"
-
 def get_driver():
     return driver
 
 
-@mcp.tool()
-async def browser_get_sop(name: str = "tmwebdriver") -> str:
-    """Read a bundled SOP for browser automation guidance.
+def _ensure_sessions(d: TMWebDriver) -> list[dict[str, Any]]:
+    sessions = d.get_all_sessions()
+    if len(sessions) == 0:
+        raise RuntimeError("No browser tabs connected.")
+    return sessions
 
-    Use this tool when the task involves browser automation details that may need
-    project-specific guidance, such as CDP JSON commands, iframe handling,
-    screenshots, cookies, downloads, autofill, file upload, or Vue 3 custom
-    components. Load the relevant SOP before attempting a risky or unfamiliar
-    operation. If the relevant SOP has already been loaded in the current task,
-    do not call this tool again unless the user asks to re-check it or the task
-    context changed enough that the SOP content may be needed again.
 
-    Args:
-        name: SOP name. Supported values: tmwebdriver, vue3_component.
-    """
-    return read_sop(name)
+def _normalize_tab_id(tab_id: str | int | None) -> int | None:
+    if tab_id is None or tab_id == "":
+        return None
+    return int(tab_id)
+
+
+def _extension_command(d: TMWebDriver, cmd: dict[str, Any], tab_id: str | int | None = None, timeout: float = 15) -> Any:
+    normalized_tab_id = _normalize_tab_id(tab_id)
+    if normalized_tab_id is not None and "tabId" not in cmd:
+        cmd["tabId"] = normalized_tab_id
+    result = d.execute_js(json.dumps(cmd, ensure_ascii=False), timeout=timeout)
+    return result.get("data", result)
 
 
 @mcp.tool()
@@ -127,18 +107,87 @@ async def browser_execute_js(script: str, switch_tab_id: str = "", no_monitor: b
 
 @mcp.tool()
 async def browser_switch_tab(tab_id: str) -> str:
-    """Switch the active browser tab.
+    """Switch the active MCP browser tab without changing the visible Chrome tab.
 
     Args:
         tab_id: The tab ID to switch to (from browser_get_tabs).
     """
     def _run():
         d = get_driver()
+        _ensure_sessions(d)
         d.default_session_id = tab_id
         session = d.sessions.get(tab_id)
-        if session and session.is_active():
-            return json.dumps({"status": "success", "active_tab": tab_id, "url": session.info.get('url', '')}, ensure_ascii=False)
-        return json.dumps({"status": "error", "msg": f"Tab {tab_id} not found or disconnected."}, ensure_ascii=False)
+        if not session or not session.is_active():
+            return json.dumps({"status": "error", "msg": f"Tab {tab_id} not found or disconnected."}, ensure_ascii=False)
+        return json.dumps({
+            "status": "success",
+            "active_tab": tab_id,
+            "url": session.info.get('url', ''),
+        }, ensure_ascii=False, default=str)
+    return await asyncio.to_thread(_run)
+
+
+@mcp.tool()
+async def browser_batch(commands: list[dict[str, Any]], tab_id: str = "", timeout: float = 20) -> str:
+    """Run multiple extension/CDP commands in one request.
+
+    Args:
+        commands: Command objects supported by the extension, such as
+            {"cmd":"cdp","method":"DOM.getDocument","params":{"depth":1}}.
+        tab_id: Optional tab ID inherited by commands that omit tabId.
+        timeout: Seconds to wait for the batch result.
+    """
+    def _run():
+        d = get_driver()
+        _ensure_sessions(d)
+        result = _extension_command(d, {"cmd": "batch", "commands": commands}, tab_id=tab_id, timeout=timeout)
+        return json.dumps({"status": "success", "results": result}, ensure_ascii=False, default=str)
+    return await asyncio.to_thread(_run)
+
+
+@mcp.tool()
+async def browser_wait(condition_js: str, timeout: float = 10, interval: float = 0.5, switch_tab_id: str = "") -> str:
+    """Wait until JavaScript condition returns a truthy value.
+
+    Args:
+        condition_js: JavaScript expression or script. The return value is tested for truthiness.
+        timeout: Maximum seconds to wait.
+        interval: Seconds between checks.
+        switch_tab_id: Optional tab ID to make active before waiting.
+    """
+    def _run():
+        d = get_driver()
+        _ensure_sessions(d)
+        if switch_tab_id:
+            d.default_session_id = switch_tab_id
+        deadline = time.time() + max(timeout, 0)
+        last_value = None
+        last_error = None
+        attempts = 0
+        while True:
+            attempts += 1
+            try:
+                response = d.execute_js(condition_js, timeout=min(max(interval, 0.2), 5))
+                last_value = response.get("data", response.get("result"))
+                last_error = None
+                if last_value:
+                    return json.dumps({
+                        "status": "success",
+                        "value": last_value,
+                        "attempts": attempts,
+                        "tab_id": d.default_session_id,
+                    }, ensure_ascii=False, default=str)
+            except Exception as e:
+                last_error = str(e)
+            if time.time() >= deadline:
+                return json.dumps({
+                    "status": "timeout",
+                    "value": last_value,
+                    "error": last_error,
+                    "attempts": attempts,
+                    "tab_id": d.default_session_id,
+                }, ensure_ascii=False, default=str)
+            time.sleep(max(interval, 0.1))
     return await asyncio.to_thread(_run)
 
 

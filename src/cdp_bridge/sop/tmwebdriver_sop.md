@@ -1,12 +1,12 @@
 # TMWebDriver SOP
 
-- 直接用web_scan/web_execute_js工具。本文件只记录特性和坑。
+- 直接用browser_scan/browser_execute_js工具。本文件只记录特性和坑。
 - 底层：`../TMWebDriver.py`通过Chrome扩展接管用户浏览器（保留登录态/Cookie）
 - 非Selenium/Playwright，保留用户浏览器登录态
 
 ## 通用特性
-- ⚠web_execute_js里使用`await`时需**显式`return`**才能拿到返回值（底层async包裹，不写return则返回null）
-- ✅web_scan自动穿透同源iframe；跨域iframe需CDP或postMessage（见下方章节）
+- ⚠browser_execute_js里使用`await`时需**显式`return`**才能拿到返回值（底层async包裹，不写return则返回null）
+- ✅browser_scan自动穿透同源iframe；跨域iframe需CDP或postMessage（见下方章节）
 
 ## 限制(isTrusted)
 - JS事件`isTrusted=false`，敏感操作（如文件上传/部分按钮）可能被拦截；这类场景首选**CDP桥**
@@ -16,11 +16,11 @@
 - 需转物理坐标时：`physX = (screenX + rect中心x) * dpr`，`physY = (screenY + chromeH + rect中心y) * dpr`；其中 `chromeH = outerHeight - innerHeight`
 
 ## 导航
-- `web_scan` 仅读当前页不导航，切换网站用 `web_execute_js` + `location.href='url'`
+- `browser_scan` 仅读当前页不导航，切换网站用 `browser_navigate` 或 `browser_execute_js` + `location.href='url'`
 
 ## Google图搜
 - class名混淆禁硬编码，点击结果用 `[role=button]` div
-- web_scan过滤边栏，弹出后用JS：文本`document.body.innerText`，大图遍历img按`naturalWidth`最大取src
+- browser_scan过滤边栏，弹出后用JS：文本`document.body.innerText`，大图遍历img按`naturalWidth`最大取src
 - "访问"链接：遍历a找`textContent.includes('访问')`的href
 - 缩略图：`img[src^="data:image"]`直接提取；大图src可能截断用`return img.src`
 
@@ -43,16 +43,15 @@ fetch('PDF_URL').then(r=>r.blob()).then(b=>{
 ## CDP桥(tmwd_cdp_bridge扩展) ⭐首选
 扩展路径：`assets/tmwd_cdp_bridge/`(需安装，含debugger权限)
 ⚠TID约定标识：首次运行自动生成到`assets/tmwd_cdp_bridge/config.js`(已gitignore)，扩展通过manifest引用
-调用：`web_execute_js` script直传JSON字符串（工具层自动识别对象格式，走WS→background.js cmd路由）
+优先使用 MCP 工具：`browser_batch`。必要时也可用 `browser_execute_js` script直传JSON字符串（工具层自动识别对象格式，走WS→background.js cmd路由）
 ```js
-// 直接传JSON字符串作为script参数，无需DOM操作
-web_execute_js script='{"cmd": "cookies"}'
-web_execute_js script='{"cmd": "tabs"}'
-web_execute_js script='{"cmd": "cdp", "tabId": N, "method": "...", "params": {...}}'
-web_execute_js script='{"cmd": "batch", "commands": [...]}'
+browser_batch commands='[{"cmd":"cdp","method":"Page.bringToFront","params":{}}]'
+browser_batch commands='[{"cmd":"cdp","method":"DOM.getDocument","params":{"depth":1}}]'
+browser_execute_js script='{"cmd":"contentSettings","type":"automaticDownloads","setting":"allow"}'
+browser_execute_js script='{"cmd": "tabs"}'
 // 返回值直接是JSON结果
 ```
-通信方式：⭐JSON字符串直传(首选) | TID DOM方式(TID元素+MutationObserver，web_scan/execute_js底层依赖)
+通信方式：⭐MCP 专用工具(首选) | JSON字符串直传 | TID DOM方式(TID元素+MutationObserver，browser_scan/browser_execute_js底层依赖)
 单命令：`{cmd:'tabs'}` | `{cmd:'cookies'}` | `{cmd:'cdp', tabId:N, method:'...', params:{...}}` | `{cmd:'management', method:'list|reload|disable|enable', extId:'...'}`
 - management：list返回所有扩展信息；reload/disable/enable需传extId
 - contentSettings：`{cmd:'contentSettings', type:'automaticDownloads', pattern:'https://*/*', setting:'allow'}`
@@ -115,7 +114,7 @@ web_execute_js script='{"cmd": "batch", "commands": [...]}'
 
 
 ## autofill获取与登录
-检测：web_scan输出input带`data-autofilled="true"`，value显示为受保护提示(非真实值，Chrome安全保护需点击释放)
+检测：browser_scan输出input带`data-autofilled="true"`，value显示为受保护提示(非真实值，Chrome安全保护需点击释放)
 - ⚠**前置条件：必须先CDP `Page.bringToFront` 切tab到前台**，Chrome仅在前台tab释放autofill保护值，后台tab物理点击无效
 - ⭐**一键释放与登录**：bringToFront → mousePressed点任一字段(无需Released，一个释放全页) → 等500ms → 补input/change事件 → 点登录
 

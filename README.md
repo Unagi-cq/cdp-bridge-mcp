@@ -57,11 +57,12 @@ MCP Server 当前暴露以下工具：
 | `browser_get_tabs` | 获取已连接标签页列表 |
 | `browser_scan` | 扫描当前页面内容，可返回简化 HTML 或纯文本 |
 | `browser_execute_js` | 在当前标签页执行 JavaScript |
-| `browser_switch_tab` | 切换活动标签页 |
+| `browser_switch_tab` | 切换 MCP 活动标签页，不改变用户当前可见的 Chrome 标签页 |
+| `browser_batch` | 批量执行扩展/CDP 命令，适合需要复用 CDP 上下文的复杂操作 |
+| `browser_wait` | 轮询 JavaScript 条件直到返回真值或超时 |
 | `browser_navigate` | 跳转当前标签页到指定 URL |
 | `browser_screenshot` | 获取页面截图 |
 | `browser_cookies` | 读取 Cookie |
-| `browser_get_sop` | 读取内置 SOP，支持 `tmwebdriver` 和 `vue3_component`。模型遇到 CDP、iframe、截图、Cookie、下载、autofill、文件上传或 Vue3 自定义组件等细节时应按需加载；同一任务中已加载过相关 SOP 时无需重复加载 |
 
 # 如何使用
 
