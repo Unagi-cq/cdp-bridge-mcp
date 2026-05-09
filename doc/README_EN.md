@@ -23,16 +23,9 @@ CDP Bridge MCP is a bridge service that connects MCP clients to real browser ses
 
 ## Demo Videos
 
-<table>
-  <tr>
-    <td width="50%">
-      <iframe src="//player.bilibili.com/player.html?isOutside=true&aid=116543333670350&bvid=BV1RDRQBrEY7&cid=38208012791&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
-    </td>
-    <td width="50%">
-      <iframe src="//player.bilibili.com/player.html?isOutside=true&aid=116543333670350&bvid=BV1RDRQBrEY7&cid=38208012791&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
-    </td>
-  </tr>
-</table>
+| Search Anthropic updates on Xiaohongshu | Read CSDN author analytics |
+| --- | --- |
+| [Watch video](https://www.bilibili.com/video/BV1RDRQBrEY7/?p=2) | [Watch video](https://www.bilibili.com/video/BV1RDRQBrEY7/) |
 
 # Introduction
 

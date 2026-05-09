@@ -23,24 +23,9 @@ CDP Bridge MCP 是一个连接 MCP 客户端与真实浏览器会话的桥接服
 
 ## 演示视频
 
-<table>
-<tr>
-    <td width="50%">
-      查询小红书平台Anthropic最新动态
-    </td>
-    <td width="50%">
-      <iframe src="//player.bilibili.com/player.html?isOutside=true&aid=116543333670350&bvid=BV1RDRQBrEY7&cid=38208012791&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      读取CSDN网站作者后台数据分析
-    </td>
-    <td width="50%">
-      <iframe src="//player.bilibili.com/player.html?isOutside=true&aid=116543333670350&bvid=BV1RDRQBrEY7&cid=38208012791&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
-    </td>
-  </tr>
-</table>
+| 查询小红书平台 Anthropic 最新动态 | 读取 CSDN 网站作者后台数据分析 |
+| --- | --- |
+| [观看视频](https://www.bilibili.com/video/BV1RDRQBrEY7/?p=2) | [观看视频](https://www.bilibili.com/video/BV1RDRQBrEY7/) |
 
 # 项目介绍
 
