@@ -3,17 +3,43 @@
 <head>
 <meta charset="utf-8">
 <style>
-body{width:420px;max-height:500px;margin:0;padding:8px;font:12px monospace;background:#1e1e1e;color:#d4d4d4;overflow-y:auto}
-h3{margin:4px 0;color:#569cd6}
-button{background:#264f78;color:#fff;border:none;padding:4px 12px;cursor:pointer;border-radius:3px;margin-bottom:6px}
-button:hover{background:#37699e}
-pre{white-space:pre-wrap;word-break:break-all;margin:0;padding:6px;background:#252526;border-radius:3px;max-height:420px;overflow-y:auto}
+*{box-sizing:border-box}
+body{width:420px;margin:0;padding:14px;background:#f6f7f9;color:#182033;font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}
+.shell{border:1px solid rgba(18,24,38,.08);border-radius:14px;background:#fff;box-shadow:0 10px 28px rgba(18,24,38,.10);overflow:hidden;}
+.header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 14px 12px;border-bottom:1px solid rgba(18,24,38,.07);}
+.title{display:flex;align-items:center;gap:9px;min-width:0;}
+.icon{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:#eef8f3;color:#168456;font-weight:700;}
+h1{margin:0;font-size:14px;line-height:1.2;font-weight:650;}
+.subtitle{margin-top:2px;color:#6b7280;font-size:12px;}
+button{height:30px;border:0;border-radius:8px;padding:0 12px;background:#182033;color:#fff;font:600 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;cursor:pointer;transition:background .15s ease,transform .15s ease,box-shadow .15s ease;}
+button:hover{background:#263047;box-shadow:0 6px 14px rgba(18,24,38,.16)}
+button:active{transform:translateY(1px);box-shadow:none}
+.status{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 14px;color:#5f6b7a;font-size:12px;background:#fbfcfd;}
+.dot{width:7px;height:7px;border-radius:50%;background:#18a058;box-shadow:0 0 0 3px rgba(24,160,88,.12);}
+.status-left{display:flex;align-items:center;gap:8px;min-width:0;}
+#count{color:#182033;font-weight:650;}
+pre{white-space:pre-wrap;word-break:break-all;margin:0;padding:12px 14px 14px;min-height:160px;max-height:390px;overflow:auto;background:#fff;color:#243044;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;}
+pre:empty::before{content:"No data";color:#8a94a6;}
 </style>
 </head>
 <body>
-<h3>🍪 Cookies</h3>
-<button id="refresh">刷新</button>
-<pre id="out">点击刷新获取 cookies...</pre>
+<div class="shell">
+  <div class="header">
+    <div class="title">
+      <div class="icon">C</div>
+      <div>
+        <h1>Cookies</h1>
+        <div class="subtitle">Current active tab</div>
+      </div>
+    </div>
+    <button id="refresh">刷新</button>
+  </div>
+  <div class="status">
+    <div class="status-left"><span class="dot"></span><span id="state">Ready</span></div>
+    <div id="count">0 items</div>
+  </div>
+  <pre id="out">点击刷新获取 cookies...</pre>
+</div>
 <script src="popup.js"></script>
 </body>
 </html>
