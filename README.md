@@ -180,5 +180,3 @@ openclaw mcp set cdp-bridge '{"command":"uvx","args":["cdp-bridge@latest"]}'
 ## 致谢
 
 本项目的浏览器插件和部分代码参考并来源于 [GenericAgent](https://github.com/lsdefine/GenericAgent)。感谢原项目作者的开源工作。
-
-本项目已在 [L站](https://linux.do/) 推广，感谢社区。
