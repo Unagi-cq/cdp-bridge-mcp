@@ -1,5 +1,10 @@
+import sys
+
+def log(*args, **kwargs):
+    print(*args, file=sys.stderr, flush=True, **kwargs)
+
 try: from bs4 import BeautifulSoup
-except ImportError: print("[Error] BeautifulSoup4 未安装，请叫Agent安装BeautifulSoup4，再使用web相关工具。")
+except ImportError: log("[Error] BeautifulSoup4 未安装，请叫Agent安装BeautifulSoup4，再使用web相关工具。")
 
 js_optHTML = r'''function optHTML(text_only=false) {
 function createEnhancedDOMCopy() {  
@@ -656,7 +661,7 @@ def get_temp_texts(driver):
     """  
     try: return list(set(driver.execute_js(js).get('data', [])))
     except Exception as e: 
-        print(e)
+        log(e)
         return []
     
 import time, re, os
@@ -712,16 +717,16 @@ def get_html(driver, cutlist=False, maxchars=35000, instruction="", extra_js="",
     html = str(soup)
     if not cutlist: return html
     lists = rr if isinstance(rr, list) else ([rr] if isinstance(rr, dict) and rr.get('selector') else [])
-    if lists: print(f"[cutlist] Found {len(lists)} list(s): {[e.get('selector','?') if isinstance(e,dict) else '?' for e in lists]}")
+    if lists: log(f"[cutlist] Found {len(lists)} list(s): {[e.get('selector','?') if isinstance(e,dict) else '?' for e in lists]}")
     for entry in lists:
         sel = entry.get('selector') if isinstance(entry, dict) else None
         if not sel: continue
         try: items = soup.select(sel)
-        except Exception: print(f'[cutlist] skip invalid selector: {sel}'); continue
+        except Exception: log(f'[cutlist] skip invalid selector: {sel}'); continue
         if len(items) < 5: continue
         total_len = sum(len(str(it)) for it in items)
         avg_len = total_len / len(items)
-        print(f"[cutlist]   '{sel}': {len(items)} items, avg {avg_len:.0f} chars, total {total_len}, if keep 3, save ~{total_len - 3 * avg_len:.0f} chars")
+        log(f"[cutlist]   '{sel}': {len(items)} items, avg {avg_len:.0f} chars, total {total_len}, if keep 3, save ~{total_len - 3 * avg_len:.0f} chars")
         if avg_len < 200 or (avg_len < 700 and total_len < 2500): continue
         hit = [it for it in items if instruction and instruction.strip() and instruction in it.get_text(" ",strip=True)]
         keep = hit[:6] if hit else items[:3]
@@ -737,7 +742,7 @@ def get_html(driver, cutlist=False, maxchars=35000, instruction="", extra_js="",
         if keep: keep[-1].insert_after(hint_tag)
         for it in removed: it.decompose()
     ss = str(optimize_html_for_tokens(soup)) if lists else html
-    print(f"[get_html] Result: {len(html)} -> {len(ss)} chars after cutlist ({100-len(ss)*100//len(html)}% saved)")
+    log(f"[get_html] Result: {len(html)} -> {len(ss)} chars after cutlist ({100-len(ss)*100//len(html)}% saved)")
     if len(ss) > maxchars: ss = str(smart_truncate(soup, maxchars))
     return ss
 
@@ -774,10 +779,10 @@ def smart_truncate(soup, budget, _depth=0):
     selflen = total - sum(l for _, l in kids)
     remaining_budget = max(budget - selflen, 0)
     tag = getattr(soup, 'name', '?')
-    print(f'{indent}[smart_truncate] <{tag}> total={total} budget={budget} selflen={selflen} kids={len(kids)}')
+    log(f'{indent}[smart_truncate] <{tag}> total={total} budget={budget} selflen={selflen} kids={len(kids)}')
     # === 1 kid: 穿透 ===
     if len(kids) == 1:
-        print(f'{indent}  -> single child, recurse into <{kids[0][0].name}>')
+        log(f'{indent}  -> single child, recurse into <{kids[0][0].name}>')
         smart_truncate(kids[0][0], remaining_budget, _depth)
         return soup
     over = sum(l for _, l in kids) - remaining_budget
@@ -793,7 +798,7 @@ def smart_truncate(soup, budget, _depth=0):
         while kids and removed < over:
             c, l = kids.pop(); c.decompose()
             removed += l; removed_count += 1
-        print(f'{indent}  -> tail-cut: removed {removed_count} children ({removed//1000}k chars) from end')
+        log(f'{indent}  -> tail-cut: removed {removed_count} children ({removed//1000}k chars) from end')
         return soup
     # === top 2-3 按比例分担 ===
     # 过滤掉太小的 kid（不到最大的 10%），让大的全扛
@@ -808,7 +813,7 @@ def smart_truncate(soup, budget, _depth=0):
         c, l = kids[i]
         share = int(over * l / top_total)
         new_keep = l - share
-        print(f'{indent}  -> <{c.name}> {l} -> {new_keep} (share={share})')
+        log(f'{indent}  -> <{c.name}> {l} -> {new_keep} (share={share})')
         actions.append((c, l, new_keep))
     # 再统一执行
     for c, l, new_keep in actions:
@@ -825,7 +830,7 @@ def execute_js_rich(script, driver, no_monitor=False):
     result = None;  error_msg = None;  reloaded = False; newTabs = []
     before_sids = set(driver.get_session_dict().keys()); response = {}
     try:
-        print(f"Executing: {script[:250]} ...")
+        log(f"Executing: {script[:250]} ...")
         response = driver.execute_js(script)
         result = response['data'] if 'data' in response else response.get('result')
         if response.get('closed', 0) == 1: reloaded = True
@@ -834,7 +839,7 @@ def execute_js_rich(script, driver, no_monitor=False):
         error = e.args[0] if e.args else str(e)
         if isinstance(error, dict): error.pop('stack', None)
         error_msg = str(error)
-        print(f"Error: {error_msg}")
+        log(f"Error: {error_msg}")
     rr = {
         "status": "failed" if error_msg else "success",
         "js_return": result,
