@@ -14,8 +14,8 @@ class Session:
         self.info = info
         self.connect_at = time.time()
         self.disconnect_at = None
-        self.type = info.get('type', 'ws')
-        self.ws_client = client if self.type in ('ws', 'ext_ws') else None
+        self.type = info.get('type', 'ext_ws')
+        self.ws_client = client if self.type == 'ext_ws' else None
         self.http_queue = client if self.type == 'http' else None
     @property
     def url(self): return self.info.get('url', '')
@@ -24,8 +24,8 @@ class Session:
         return self.disconnect_at is None
     def reconnect(self, client, info):
         self.info = info
-        self.type = info.get('type', 'ws')
-        if self.type in ('ws', 'ext_ws'):
+        self.type = info.get('type', 'ext_ws')
+        if self.type == 'ext_ws':
             self.ws_client = client
             self.http_queue = None
         elif self.type == 'http':
@@ -127,12 +127,7 @@ class TMWebDriver:
             def handle(self) -> None:  
                 try:  
                     data = json.loads(self.data)  
-                    if data.get('type') == 'ready':  
-                        session_id = data.get('sessionId')  
-                        session_info = {'url': data.get('url'), 'title': data.get('title', ''),
-                            'connected_at': time.time(), 'type': 'ws'}  
-                        driver._register_client(session_id, self, session_info)  
-                    elif data.get('type') in ['ext_ready', 'tabs_update']:
+                    if data.get('type') in ['ext_ready', 'tabs_update']:
                         tabs = data.get('tabs', [])
                         current_tab_ids = {str(tab['id']) for tab in tabs}
                         log(f"Received tabs update: {current_tab_ids}")
@@ -207,14 +202,14 @@ class TMWebDriver:
                     raise ValueError(f"会话ID {session_id} 未连接")  
 
         tp = session.type
-        if tp not in ('ws', 'http', 'ext_ws'):
+        if tp not in ('http', 'ext_ws'):
             raise ValueError(f"Unsupported session type: {tp}")
         exec_id = str(uuid.uuid4())  
         payload_dict = {'id': exec_id, 'code': code}
         if tp == 'ext_ws': payload_dict['tabId'] = int(session.id)
         payload = json.dumps(payload_dict)
 
-        if tp in ['ws', 'ext_ws']: session.ws_client.send_message(payload)  
+        if tp == 'ext_ws': session.ws_client.send_message(payload)  
         elif tp == 'http': session.http_queue.put(payload)
 
         start_time = time.time()  
@@ -225,12 +220,12 @@ class TMWebDriver:
             time.sleep(0.2)  
             if not acked and exec_id in self.acks:
                 acked = True; start_time = time.time()
-            if tp in ['ws', 'ext_ws']:
+            if tp == 'ext_ws':
                 if not session.is_active(): hasjump = True
                 if hasjump and session.is_active():
                     return {'result': f"Session {session_id} reloaded.", "closed":1}
-            if time.time() - start_time > timeout:  
-                if tp in ['ws', 'ext_ws']:
+            if time.time() - start_time > timeout:
+                if tp == 'ext_ws':
                     if hasjump: return {'result': f"Session {session_id} reloaded and new page is loading...", 'closed':1}
                     if acked: return {"result": f"No response data in {timeout}s (ACK received, script may still be running)"}
                     return {"result": f"No response data in {timeout}s (no ACK, script may not have been delivered)"}
