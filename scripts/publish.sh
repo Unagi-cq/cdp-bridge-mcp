@@ -8,8 +8,9 @@ set -euo pipefail
 #   UV_PUBLISH_TOKEN=xxx ./scripts/publish.sh  # token via env var
 
 echo "==> Cleaning old dist files..."
-rm -rf dist/
+rm -rf ../dist/
 
+cd ../
 echo "==> Building source distribution and wheel..."
 uv build
 
