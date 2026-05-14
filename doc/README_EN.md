@@ -48,6 +48,49 @@ Playwright MCP and Chrome DevTools MCP are both powerful, but they are more orie
 
 If your goal is to let a model control a dedicated automation browser, Playwright MCP is a good fit. If your goal is to debug Chrome or work closely with the DevTools protocol, Chrome DevTools MCP is a good fit. If your goal is to let a model read and operate on the real browser page you are currently using, CDP Bridge MCP is closer to that scenario.
 
+## System Architecture
+
+```mermaid
+graph TB
+    subgraph Client["🖥️ MCP Client"]
+        LLM["LLM (Claude, Codex, etc.)"]
+    end
+
+    subgraph Server["⚙️ cdp-bridge MCP Server (Python)"]
+        FastMCP["FastMCP stdio Server<br/>9 MCP Tools"]
+        TMWD["TMWebDriver<br/>Session Manager"]
+        WS["WebSocket Server<br/>127.0.0.1:18765"]
+        HTTP["HTTP Server<br/>127.0.0.1:18766"]
+        FastMCP --- TMWD
+        TMWD --- WS
+        TMWD --- HTTP
+    end
+
+    subgraph Browser["🌐 Chrome / Chromium Browser"]
+        subgraph Extension["Extension (tmwd_cdp_bridge)"]
+            BG["background.js<br/>Service Worker"]
+            CT["content.js<br/>Content Script"]
+        end
+        Tabs["Browser Tabs<br/>(User's Real Session)"]
+    end
+
+    LLM <-->|"MCP Protocol (stdio)"| FastMCP
+    WS <-->|"WebSocket (ext_ws)"| BG
+    HTTP <-->|"HTTP Long-poll"| BG
+    BG <-->|"chrome.scripting<br/>CDP Runtime.evaluate"| Tabs
+    BG <-->|"chrome.runtime.sendMessage"| CT
+    CT -->|"DOM Access"| Tabs
+```
+
+**Data Flow:**
+
+1. The MCP client starts the `cdp-bridge` process via stdio, establishing MCP protocol communication.
+2. TMWebDriver starts two server ports: WebSocket (port 18765) and HTTP (port 18766).
+3. The browser extension connects via WebSocket to the server, reporting all open tabs (`ext_ws` mode). The server creates a Session for each tab.
+4. When an MCP tool is called (e.g., `browser_execute_js`), the server sends the JavaScript code to the extension via WebSocket.
+5. The extension's background.js first tries `chrome.scripting.executeScript` in the page's MAIN world. If the page has CSP restrictions, it automatically falls back to CDP `Runtime.evaluate`.
+6. Execution results are returned to the server via WebSocket, then relayed to the LLM client through the MCP protocol.
+
 ## Available Tools
 
 The MCP server currently exposes these tools:
