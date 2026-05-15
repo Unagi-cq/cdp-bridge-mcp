@@ -57,7 +57,7 @@ graph TB
     end
 
     subgraph Server["⚙️ cdp-bridge MCP 服务 (Python)"]
-        FastMCP["FastMCP stdio Server<br/>9 个 MCP 工具"]
+        FastMCP["FastMCP<br/>stdio / streamable-http"]
         TMWD["TMWebDriver<br/>会话管理器"]
         WS["WebSocket Server<br/>127.0.0.1:18765"]
         HTTP["HTTP Server<br/>127.0.0.1:18766"]
@@ -75,6 +75,7 @@ graph TB
     end
 
     LLM <-->|"MCP 协议 (stdio)"| FastMCP
+    LLM <-->|"MCP 协议 (streamable-http)"| FastMCP
     WS <-->|"WebSocket (ext_ws)"| BG
     HTTP <-->|"HTTP 长轮询"| BG
     BG <-->|"chrome.scripting<br/>CDP Runtime.evaluate"| Tabs
@@ -84,8 +85,8 @@ graph TB
 
 **数据流简述：**
 
-1. MCP 客户端通过 stdio 启动 `cdp-bridge` 进程，建立 MCP 协议通信。
-2. TMWebDriver 启动 WebSocket（:18765）和 HTTP（:18766）两个服务端口。
+1. MCP 客户端通过 **stdio**（子进程）或 **streamable-http**（HTTP 端点）连接 `cdp-bridge` 服务。
+2. TMWebDriver 启动 WebSocket（:18765）和 HTTP（:18766）两个服务端口，供浏览器扩展连接。
 3. 浏览器扩展通过 WebSocket 连接服务端，上报所有已打开标签页（`ext_ws` 模式），服务端为每个标签页创建 Session。
 4. 当 MCP 工具被调用（如 `browser_execute_js`），服务端将 JS 代码通过 WebSocket 发送到扩展。
 5. 扩展的 background.js 优先使用 `chrome.scripting.executeScript` 在页面 MAIN world 执行；若页面有 CSP 限制，自动降级为 CDP `Runtime.evaluate`。
@@ -140,19 +141,31 @@ MCP Server 当前暴露以下工具：
 
 第一步，电脑上安装 `uv`。
 
+### 两种传输模式
+
+CDP Bridge 支持两种 MCP 传输模式，可根据使用场景选择：
+
+| 模式 | 原理 | 适用场景 |
+|------|------|----------|
+| `stdio`（默认） | MCP 客户端以子进程启动服务，通过标准输入/输出通信 | Claude Desktop、Claude Code、Codex 等本地客户端 |
+| `streamable-http` | 服务以独立 HTTP 进程运行，客户端通过 HTTP 请求连接 | 多客户端共享、Docker 部署、服务常驻 |
+
 ### 脚本测试
 
 ```bash
+# stdio 模式（默认）
 uvx cdp-bridge@latest
-uvx cdp-bridge@latest --transport stdio
-uvx cdp-bridge@latest --transport streamable-http --port 3001
-uv tool run cdp-bridge@latest # uvx不可用时
+
+# streamable-http 模式，指定端口
+uvx cdp-bridge@latest --transport streamable-http --port 8000
 ```
 
-不传 `--transport` 时默认使用 `stdio`。使用 `streamable-http` 时默认端口为 `8000`，服务地址为 `http://127.0.0.1:<port>/mcp`。
+不传 `--transport` 时默认使用 `stdio`。`streamable-http` 模式的服务地址为 `http://127.0.0.1:<port>/mcp`。
 
 ### 标准配置
-在 MCP 客户端中可以这样配置：
+
+**stdio 模式：**
+
 ```json
 {
   "mcpServers": {
@@ -164,21 +177,49 @@ uv tool run cdp-bridge@latest # uvx不可用时
 }
 ```
 
+**streamable-http 模式：**
+
+先启动服务：
+```bash
+uvx cdp-bridge@latest --transport streamable-http --port 8000
+```
+
+再配置客户端连接：
+```json
+{
+  "mcpServers": {
+    "cdp-bridge": {
+      "type": "streamableHttp",
+      "url": "http://127.0.0.1:8000/mcp"
+    }
+  }
+}
+```
+
 ### Claude Code
 
 ```bash
+# stdio 模式
 claude mcp add cdp-bridge uvx cdp-bridge@latest
+
+# streamable-http 模式（先启动服务，再注册）
+claude mcp add cdp-bridge --transport streamable-http http://127.0.0.1:8000/mcp
 ```
 
 ### Codex
 
 ```bash
+# stdio 模式
 codex mcp add cdp-bridge uvx cdp-bridge@latest
+
+# streamable-http 模式
+codex mcp add cdp-bridge --transport streamable-http --url http://127.0.0.1:8000/mcp
 ```
 
 ### opencode
 在`~/.config/opencode/opencode.json`里面配置：
 
+**stdio 模式：**
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
@@ -193,7 +234,20 @@ codex mcp add cdp-bridge uvx cdp-bridge@latest
     }
   }
 }
+```
 
+**streamable-http 模式：**
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "cdp-bridge": {
+      "type": "remote",
+      "url": "http://127.0.0.1:8000/mcp",
+      "enabled": true
+    }
+  }
+}
 ```
 
 ### OpenClaw
@@ -201,11 +255,14 @@ codex mcp add cdp-bridge uvx cdp-bridge@latest
 可以使用 OpenClaw CLI 写入 MCP 配置：
 
 ```bash
+# stdio 模式
 openclaw mcp set cdp-bridge '{"command":"uvx","args":["cdp-bridge@latest"]}'
+
+# streamable-http 模式
+openclaw mcp set cdp-bridge '{"type":"streamableHttp","url":"http://127.0.0.1:8000/mcp"}'
 ```
 
-等价配置结构如下：
-
+等价的 stdio 配置结构：
 ```json
 {
   "mcp": {

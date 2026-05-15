@@ -57,7 +57,7 @@ graph TB
     end
 
     subgraph Server["⚙️ cdp-bridge MCP Server (Python)"]
-        FastMCP["FastMCP stdio Server<br/>9 MCP Tools"]
+        FastMCP["FastMCP<br/>stdio / streamable-http"]
         TMWD["TMWebDriver<br/>Session Manager"]
         WS["WebSocket Server<br/>127.0.0.1:18765"]
         HTTP["HTTP Server<br/>127.0.0.1:18766"]
@@ -75,6 +75,7 @@ graph TB
     end
 
     LLM <-->|"MCP Protocol (stdio)"| FastMCP
+    LLM <-->|"MCP Protocol (streamable-http)"| FastMCP
     WS <-->|"WebSocket (ext_ws)"| BG
     HTTP <-->|"HTTP Long-poll"| BG
     BG <-->|"chrome.scripting<br/>CDP Runtime.evaluate"| Tabs
@@ -84,8 +85,8 @@ graph TB
 
 **Data Flow:**
 
-1. The MCP client starts the `cdp-bridge` process via stdio, establishing MCP protocol communication.
-2. TMWebDriver starts two server ports: WebSocket (port 18765) and HTTP (port 18766).
+1. The MCP client connects to the `cdp-bridge` service via **stdio** (subprocess) or **streamable-http** (HTTP endpoint).
+2. TMWebDriver starts two server ports for the browser extension: WebSocket (port 18765) and HTTP (port 18766).
 3. The browser extension connects via WebSocket to the server, reporting all open tabs (`ext_ws` mode). The server creates a Session for each tab.
 4. When an MCP tool is called (e.g., `browser_execute_js`), the server sends the JavaScript code to the extension via WebSocket.
 5. The extension's background.js first tries `chrome.scripting.executeScript` in the page's MAIN world. If the page has CSP restrictions, it automatically falls back to CDP `Runtime.evaluate`.
@@ -133,27 +134,56 @@ First, install `uv` on your computer.
 
 > `uvx` was officially introduced in uv 0.2.0. If your uv version is lower than 0.2.0, the `uvx` command may not be available. In older versions, similar functionality can be used through `uv tool run`, which is also the underlying behavior of `uvx`.
 
+### Two Transport Modes
+
+CDP Bridge supports two MCP transport modes:
+
+| Mode | How it Works | Best For |
+|------|-------------|----------|
+| `stdio` (default) | MCP client launches the server as a subprocess, communicating over stdin/stdout | Claude Desktop, Claude Code, Codex, and other local clients |
+| `streamable-http` | Server runs as a standalone HTTP process, clients connect via HTTP requests | Remote access, multi-client sharing, Docker deployments, persistent services |
+
 ### Script Test
 
 ```bash
-uvx cdp-bridge # uv >= 0.2.0
-uvx cdp-bridge --transport stdio
-uvx cdp-bridge --transport streamable-http --port 3001
-uv tool run # uv < 0.2.0
+# stdio mode (default)
+uvx cdp-bridge@latest
+
+# streamable-http mode with custom port
+uvx cdp-bridge@latest --transport streamable-http --port 8000
 ```
 
-When `--transport` is omitted, `stdio` is used by default. With `streamable-http`, the default port is `8000` and the server URL is `http://127.0.0.1:<port>/mcp`.
+When `--transport` is omitted, `stdio` is used by default. In `streamable-http` mode the server URL is `http://127.0.0.1:<port>/mcp`.
 
 ### Standard Configuration
 
-You can configure it in an MCP client like this:
+**stdio mode:**
 
 ```json
 {
   "mcpServers": {
     "cdp-bridge": {
       "command": "uvx",
-      "args": ["cdp-bridge"]
+      "args": ["cdp-bridge@latest"]
+    }
+  }
+}
+```
+
+**streamable-http mode:**
+
+First start the server:
+```bash
+uvx cdp-bridge@latest --transport streamable-http --port 8000
+```
+
+Then configure the client to connect:
+```json
+{
+  "mcpServers": {
+    "cdp-bridge": {
+      "type": "streamableHttp",
+      "url": "http://127.0.0.1:8000/mcp"
     }
   }
 }
@@ -162,19 +192,28 @@ You can configure it in an MCP client like this:
 ### Claude Code
 
 ```bash
-claude mcp add cdp-bridge uvx cdp-bridge
+# stdio mode
+claude mcp add cdp-bridge uvx cdp-bridge@latest
+
+# streamable-http mode (start server first, then register)
+claude mcp add cdp-bridge --transport streamable-http http://127.0.0.1:8000/mcp
 ```
 
 ### Codex
 
 ```bash
-codex mcp add cdp-bridge uvx cdp-bridge
+# stdio mode
+codex mcp add cdp-bridge uvx cdp-bridge@latest
+
+# streamable-http mode
+codex mcp add cdp-bridge --transport streamable-http --url http://127.0.0.1:8000/mcp
 ```
 
 ### opencode
 
 Configure it in `~/.config/opencode/opencode.json`:
 
+**stdio mode:**
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
@@ -183,8 +222,22 @@ Configure it in `~/.config/opencode/opencode.json`:
       "type": "local",
       "command": [
         "uvx",
-        "cdp-bridge"
+        "cdp-bridge@latest"
       ],
+      "enabled": true
+    }
+  }
+}
+```
+
+**streamable-http mode:**
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "cdp-bridge": {
+      "type": "remote",
+      "url": "http://127.0.0.1:8000/mcp",
       "enabled": true
     }
   }
@@ -196,10 +249,14 @@ Configure it in `~/.config/opencode/opencode.json`:
 You can write the MCP configuration with the OpenClaw CLI:
 
 ```bash
+# stdio mode
 openclaw mcp set cdp-bridge '{"command":"uvx","args":["cdp-bridge@latest"]}'
+
+# streamable-http mode
+openclaw mcp set cdp-bridge '{"type":"streamableHttp","url":"http://127.0.0.1:8000/mcp"}'
 ```
 
-Equivalent configuration shape:
+Equivalent stdio configuration shape:
 
 ```json
 {
