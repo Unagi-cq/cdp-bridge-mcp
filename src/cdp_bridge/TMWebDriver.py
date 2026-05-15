@@ -242,7 +242,18 @@ class TMWebDriver:
         return rr
     
     def _remote_cmd(self, cmd):
-        try: return requests.post(self.remote, headers={"Content-Type": "application/json"}, json=cmd, timeout=30).json()
+        try:
+            session = requests.Session()
+            session.trust_env = False
+            resp = session.post(self.remote, headers={"Content-Type": "application/json"}, json=cmd, timeout=30)
+            resp.raise_for_status()
+            if not resp.text.strip():
+                raise RuntimeError(f"TMWebDriver master returned an empty response for {cmd.get('cmd')}")
+            try:
+                return resp.json()
+            except ValueError as e:
+                snippet = resp.text[:200].replace("\n", " ")
+                raise RuntimeError(f"TMWebDriver master returned non-JSON response for {cmd.get('cmd')}: {snippet}") from e
         except (ConnectionError, requests.exceptions.ConnectionError):
             raise ConnectionError("TMWebDriver master未运行，看tmwebdriver_sop启动master")
 
