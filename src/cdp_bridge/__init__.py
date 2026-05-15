@@ -9,8 +9,21 @@ def main():
     parser = argparse.ArgumentParser(
         description="Run the CDP Bridge MCP server for browser automation through the companion extension."
     )
-    parser.parse_args()
-    mcp.run()
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "streamable-http"],
+        default="stdio",
+        help="MCP transport to use. Defaults to stdio.",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="HTTP port for streamable-http transport. Defaults to 8000.",
+    )
+    args = parser.parse_args()
+    mcp.settings.port = args.port
+    mcp.run(transport=args.transport)
 
 
 def extension_path():

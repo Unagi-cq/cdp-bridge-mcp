@@ -144,8 +144,13 @@ MCP Server 当前暴露以下工具：
 
 ```bash
 uvx cdp-bridge@latest
+uvx cdp-bridge@latest --transport stdio
+uvx cdp-bridge@latest --transport streamable-http --port 3001
 uv tool run cdp-bridge@latest # uvx不可用时
 ```
+
+不传 `--transport` 时默认使用 `stdio`。使用 `streamable-http` 时默认端口为 `8000`，服务地址为 `http://127.0.0.1:<port>/mcp`。
+
 ### 标准配置
 在 MCP 客户端中可以这样配置：
 ```json

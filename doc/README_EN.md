@@ -137,8 +137,12 @@ First, install `uv` on your computer.
 
 ```bash
 uvx cdp-bridge # uv >= 0.2.0
+uvx cdp-bridge --transport stdio
+uvx cdp-bridge --transport streamable-http --port 3001
 uv tool run # uv < 0.2.0
 ```
+
+When `--transport` is omitted, `stdio` is used by default. With `streamable-http`, the default port is `8000` and the server URL is `http://127.0.0.1:<port>/mcp`.
 
 ### Standard Configuration
 
