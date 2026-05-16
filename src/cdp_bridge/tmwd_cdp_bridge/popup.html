@@ -4,8 +4,9 @@
 <meta charset="utf-8">
 <style>
 *{box-sizing:border-box}
-body{width:420px;margin:0;padding:14px;background:#f6f7f9;color:#182033;font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}
-.shell{border:1px solid rgba(18,24,38,.08);border-radius:14px;background:#fff;box-shadow:0 10px 28px rgba(18,24,38,.10);overflow:hidden;}
+html,body{width:420px;height:600px;margin:0;overflow:hidden;}
+body{display:flex;padding:14px;background:#f6f7f9;color:#182033;font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}
+.shell{display:flex;flex:1;min-height:0;flex-direction:column;border:1px solid rgba(18,24,38,.08);border-radius:14px;background:#fff;box-shadow:0 10px 28px rgba(18,24,38,.10);overflow:hidden;}
 .header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 14px 12px;border-bottom:1px solid rgba(18,24,38,.07);}
 .title{display:flex;align-items:center;gap:9px;min-width:0;}
 .icon{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:#eef8f3;color:#168456;font-weight:700;}
@@ -18,7 +19,12 @@ button:active{transform:translateY(1px);box-shadow:none}
 .dot{width:7px;height:7px;border-radius:50%;background:#18a058;box-shadow:0 0 0 3px rgba(24,160,88,.12);}
 .status-left{display:flex;align-items:center;gap:8px;min-width:0;}
 #count{color:#182033;font-weight:650;}
-pre{white-space:pre-wrap;word-break:break-all;margin:0;padding:12px 14px 14px;min-height:160px;max-height:390px;overflow:auto;background:#fff;color:#243044;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;}
+.config{display:grid;grid-template-columns:1fr 92px;gap:8px;padding:12px 14px;border-bottom:1px solid rgba(18,24,38,.07);background:#fbfcfd;}
+.config label{display:block;color:#5f6b7a;font-size:11px;margin-bottom:3px;}
+.config input{width:100%;height:28px;border:1px solid rgba(18,24,38,.14);border-radius:7px;padding:0 8px;font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}
+.config .full{grid-column:1 / -1;}
+.preview{grid-column:1 / -1;color:#6b7280;font:12px ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;}
+pre{flex:1;min-height:0;white-space:pre-wrap;word-break:break-all;margin:0;padding:12px 14px 14px;overflow:auto;background:#fff;color:#243044;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;}
 pre:empty::before{content:"No data";color:#8a94a6;}
 </style>
 </head>
@@ -28,11 +34,17 @@ pre:empty::before{content:"No data";color:#8a94a6;}
     <div class="title">
       <div class="icon">C</div>
       <div>
-        <h1>Cookies</h1>
-        <div class="subtitle">Current active tab</div>
+        <h1>CDP Bridge</h1>
+        <div class="subtitle">Cookies and bridge settings</div>
       </div>
     </div>
     <button id="refresh">刷新</button>
+  </div>
+  <div class="config">
+    <div><label>Bridge Host</label><input id="bridgeHost" placeholder="127.0.0.1"></div>
+    <div><label>Port</label><input id="bridgePort" type="number" min="1" max="65535" placeholder="optional"></div>
+    <div id="wsPreview" class="preview">ws://127.0.0.1:18765</div>
+    <button id="saveBridge" class="full">保存连接配置</button>
   </div>
   <div class="status">
     <div class="status-left"><span class="dot"></span><span id="state">Ready</span></div>

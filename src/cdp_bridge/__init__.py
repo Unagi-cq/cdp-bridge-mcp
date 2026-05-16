@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 
-from .server import mcp
+from .server import configure_driver, mcp
 
 
 def main():
@@ -21,8 +21,15 @@ def main():
         default=8000,
         help="HTTP port for streamable-http transport. Defaults to 8000.",
     )
+    parser.add_argument(
+        "--ws-port",
+        type=int,
+        default=18765,
+        help="WebSocket port for the companion extension. Defaults to 18765.",
+    )
     args = parser.parse_args()
     mcp.settings.port = args.port
+    configure_driver(websocket_port=args.ws_port)
     mcp.run(transport=args.transport)
 
 

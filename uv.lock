@@ -58,7 +58,7 @@ wheels = [
 
 [[package]]
 name = "cdp-bridge"
-version = "0.1.12b0"
+version = "0.1.14"
 source = { editable = "." }
 dependencies = [
     { name = "beautifulsoup4" },

@@ -9,10 +9,17 @@ from . import simphtml
 mcp = FastMCP("tmwebdriver-bridge")
 
 from .TMWebDriver import TMWebDriver
-driver = TMWebDriver()
+driver: TMWebDriver | None = None
+
+
+def configure_driver(websocket_port: int = 18765) -> TMWebDriver:
+    global driver
+    if driver is None:
+        driver = TMWebDriver(port=websocket_port)
+    return driver
 
 def get_driver():
-    return driver
+    return configure_driver()
 
 
 def _ensure_sessions(d: TMWebDriver) -> list[dict[str, Any]]:
