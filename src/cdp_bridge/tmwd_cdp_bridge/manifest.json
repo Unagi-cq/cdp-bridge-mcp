@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "TMWD CDP Bridge",
+  "name": "TH CDP Bridge",
   "version": "1.0.10",
-  "description": "Cookie viewer + CDP bridge",
+  "description": "专为 LLM 与 Agent 设计的浏览器插件，让 AI 帮你打开网页、点击按钮、填写表单、提取信息，自动化各种繁琐的网页操作。",
   "permissions": [
     "cookies",
     "tabs",
@@ -12,7 +12,8 @@
     "alarms",
     "declarativeNetRequest",
     "management",
-    "contentSettings"
+    "contentSettings",
+    "storage"
   ],
   "host_permissions": ["<all_urls>"],
   "background": {
