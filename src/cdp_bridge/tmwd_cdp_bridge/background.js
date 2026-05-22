@@ -4,6 +4,7 @@ try { importScripts('config.js'); } catch (_) {}
 const DEFAULT_BRIDGE_CONFIG = {
   bridgeHost: typeof DEFAULT_BRIDGE_HOST !== 'undefined' ? DEFAULT_BRIDGE_HOST : '127.0.0.1',
   bridgePort: typeof DEFAULT_BRIDGE_PORT !== 'undefined' ? DEFAULT_BRIDGE_PORT : 18765,
+  bridgeToken: '__default__',
 };
 let bridgeConfig = { ...DEFAULT_BRIDGE_CONFIG };
 let bridgeWsUrl = buildWsUrl(bridgeConfig);
@@ -13,6 +14,10 @@ async function loadBridgeConfig() {
   bridgeConfig = await chrome.storage.local.get(DEFAULT_BRIDGE_CONFIG);
   bridgeConfig.bridgeHost = normalizeBridgeHost(bridgeConfig.bridgeHost || DEFAULT_BRIDGE_CONFIG.bridgeHost);
   bridgeConfig.bridgePort = normalizeBridgePort(bridgeConfig.bridgeHost, bridgeConfig.bridgePort);
+  if (!bridgeConfig.bridgeToken) {
+    bridgeConfig.bridgeToken = DEFAULT_BRIDGE_CONFIG.bridgeToken;
+    await chrome.storage.local.set({ bridgeToken: bridgeConfig.bridgeToken });
+  }
   bridgeWsUrl = buildWsUrl(bridgeConfig);
   return bridgeConfig;
 }
@@ -57,7 +62,9 @@ async function handleExtMessage(msg, sender) {
   // 插件页面交互事件
   if (msg.cmd === 'bridge_config_get') return { ok: true, data: await loadBridgeConfig() };
   if (msg.cmd === 'bridge_config_set') {
-    await chrome.storage.local.set(msg.config || {});
+    const nextConfig = { ...(msg.config || {}) };
+    if (!nextConfig.bridgeToken) nextConfig.bridgeToken = DEFAULT_BRIDGE_CONFIG.bridgeToken;
+    await chrome.storage.local.set(nextConfig);
     await loadBridgeConfig();
     if (ws) ws.close();
     ws = null;
@@ -372,10 +379,12 @@ async function connectWS() {
     console.log('[TMWD-WS] Connected!');
     scheduleKeepalive(); // Keep SW alive while connected
     const tabs = (await chrome.tabs.query({})).filter(t => isScriptable(t.url));
-    ws.send(JSON.stringify({
+    const msg = {
       type: 'ext_ready',
       tabs: tabs.map(t => ({ id: t.id, url: t.url, title: t.title }))
-    }));
+    };
+    if (bridgeConfig.bridgeToken) msg.token = bridgeConfig.bridgeToken;
+    ws.send(JSON.stringify(msg));
     console.log('[TMWD-WS] Sent ext_ready with', tabs.length, 'tabs');
   };
   ws.onmessage = async (event) => {
@@ -427,10 +436,12 @@ chrome.runtime.onInstalled.addListener(() => connectWS());
 async function sendTabsUpdate() {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
   const tabs = (await chrome.tabs.query({})).filter(t => isScriptable(t.url) && !/streamlit/i.test(t.title));
-  ws.send(JSON.stringify({
+  const msg = {
     type: 'tabs_update',
     tabs: tabs.map(t => ({ id: t.id, url: t.url, title: t.title }))
-  }));
+  };
+  if (bridgeConfig.bridgeToken) msg.token = bridgeConfig.bridgeToken;
+  ws.send(JSON.stringify(msg));
 }
 chrome.tabs.onUpdated.addListener((_, changeInfo) => {
   if (changeInfo.status === 'complete') sendTabsUpdate();

@@ -39,6 +39,7 @@ button:active{transform:translateY(1px);box-shadow:none}
   <div class="config">
     <div><label>Bridge Host</label><input id="bridgeHost" placeholder="127.0.0.1"></div>
     <div><label>Port</label><input id="bridgePort" type="number" min="1" max="65535" placeholder="optional"></div>
+    <div class="full"><label>Token (http模式下的用户标识)</label><div style="display:flex;gap:6px;"><input id="bridgeToken" placeholder="optional" style="flex:1"><button id="genToken" style="width:auto;padding:0 10px;font-size:11px;background:#4f5d73;">随机</button></div></div>
     <div id="wsPreview" class="preview">ws://127.0.0.1:18765</div>
     <button id="saveBridge" class="full">保存连接配置</button>
   </div>
