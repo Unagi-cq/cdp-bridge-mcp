@@ -286,7 +286,7 @@ CDP_BRIDGE_TOKENS="team_alice,team_bob" uvx cdp-bridge@latest --transport stream
   }
 }
 ```
-# 用户B
+
 **streamable-http 模式：**
 
 先启动服务：
