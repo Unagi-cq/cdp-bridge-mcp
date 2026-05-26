@@ -151,6 +151,44 @@ async def browser_switch_tab(tab_id: str) -> str:
 
 
 @mcp.tool()
+async def browser_focus_tab(tab_id: str) -> str:
+    """Bring a Chrome tab to the foreground: activate the tab AND focus its window.
+
+    Unlike browser_switch_tab (which only changes the MCP-side active session
+    without touching the visible Chrome UI), this actually makes the tab visible
+    to the user. Use this when the user can't find the tab the agent is working
+    on (e.g. across many windows / Spaces / minimized windows).
+
+    Goes through chrome.tabs.update + chrome.windows.update (extension-native
+    APIs), avoiding the chrome.debugger CDP "Not allowed" restriction on
+    Target.activateTarget.
+
+    Args:
+        tab_id: The tab ID to focus (from browser_get_tabs).
+    """
+    def _run():
+        d = get_driver()
+        _ensure_sessions(d)
+        normalized = _normalize_tab_id(tab_id)
+        if normalized is None:
+            return json.dumps({"status": "error", "msg": "tab_id is required"}, ensure_ascii=False)
+        result = _extension_command(
+            d,
+            {"cmd": "tabs", "method": "switch", "tabId": normalized},
+            timeout=10,
+        )
+        # User asked us to bring this tab to the front — they will most likely
+        # operate on it next, so sync the MCP-side active session too.
+        d.default_session_id = tab_id
+        return json.dumps({
+            "status": "success",
+            "focused_tab": tab_id,
+            "extension_response": result,
+        }, ensure_ascii=False, default=str)
+    return await asyncio.to_thread(_run)
+
+
+@mcp.tool()
 async def browser_batch(commands: list[dict[str, Any]], tab_id: str = "", timeout: float = 20) -> str:
     """Run multiple extension/CDP commands in one request.
 
