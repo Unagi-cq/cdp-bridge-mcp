@@ -1,4 +1,4 @@
-import asyncio, json, time
+import asyncio, json, time, os
 import importlib
 from typing import Any
 from contextvars import ContextVar
@@ -6,6 +6,7 @@ from contextvars import ContextVar
 from mcp.server.fastmcp import FastMCP
 
 from . import simphtml
+from . import snapshot
 
 mcp = FastMCP("tmwebdriver-bridge")
 
@@ -292,6 +293,289 @@ async def browser_screenshot(tab_id: str = "") -> str:
         if isinstance(data, dict) and 'data' in data:
             return json.dumps({"status": "success", "format": "png", "base64": data['data']}, ensure_ascii=False)
         return json.dumps({"status": "success", "data": data}, ensure_ascii=False, default=str)
+    return await asyncio.to_thread(_run)
+
+
+@mcp.tool()
+async def browser_click(uid: str, switch_tab_id: str = "") -> str:
+    """Click on an element by its uid from the page accessibility tree snapshot.
+
+    First takes a fresh snapshot to find the element, resolves DOM info, then clicks it.
+
+    Args:
+        uid: The uid of the element to click (from browser_snapshot output).
+        switch_tab_id: Switch to this tab before clicking.
+    """
+    token = _get_token()
+    def _run():
+        d = get_driver()
+        ctx = d.get_context(token)
+        sessions = d.get_all_sessions(token=token)
+        if len(sessions) == 0:
+            return json.dumps({"status": "error", "msg": "No browser tabs connected."}, ensure_ascii=False)
+
+        if switch_tab_id:
+            ctx.default_session_id = switch_tab_id
+
+        tab_id = ctx.default_session_id
+
+        # Try to reuse cached snapshot from browser_snapshot
+        cached = snapshot.get_cached_snapshot(token, tab_id)
+        if cached:
+            root = cached["root"]
+            sid = cached["sid"]
+        else:
+            # Step 1: Get accessibility tree
+            ax_response = _extension_command(
+                d,
+                {"cmd": "cdp", "method": "Accessibility.getFullAXTree"},
+                tab_id=tab_id,
+                timeout=10,
+                token=token,
+            )
+
+            ax_nodes = snapshot.parse_ax_tree_response(ax_response)
+            if not ax_nodes:
+                return json.dumps({"status": "error", "msg": "Accessibility tree is empty."}, ensure_ascii=False)
+
+            root = snapshot.build_tree(ax_nodes, interesting_only=True)
+            if root is None:
+                return json.dumps({"status": "error", "msg": "Failed to build accessibility tree."}, ensure_ascii=False)
+
+            sid = snapshot.SnapshotIdCounter.get_and_increment()
+            snapshot.assign_uids(root, sid)
+
+            # Resolve DOM info for precise locating
+            backend_ids = snapshot.collect_dom_info(ax_nodes)
+            if backend_ids:
+                tab_id_int = int(tab_id) if isinstance(tab_id, str) else tab_id
+                snapshot.resolve_dom_info_by_query(d, token, tab_id_int, ax_nodes, backend_ids)
+                snapshot.enrich_nodes_with_dom(root, backend_ids)
+
+            # Cache for next click
+            snapshot.cache_snapshot(token, root, sid, tab_id)
+
+        # Step 2: Find the node by uid
+        target = snapshot.find_node_by_uid(root, uid)
+        if target is None:
+            return json.dumps({
+                "status": "error",
+                "msg": f"Element uid '{uid}' not found in current snapshot.",
+                "hint": "Use browser_snapshot to get the latest element uids.",
+            }, ensure_ascii=False)
+
+        # Step 3: Build click JS based on element DOM properties
+        click_js = _build_click_js_for_node(target)
+
+        # Step 4: Execute the click
+        try:
+            result = d.execute_js(click_js, timeout=10, token=token)
+            data = result.get("data", result)
+            if isinstance(data, dict) and data.get("ok"):
+                val = data
+                return json.dumps({
+                    "status": "success",
+                    "msg": f"Clicked: {val.get('tag', '')} - {val.get('text', '')}",
+                    "element": {"uid": uid, "role": target.role, "name": target.name, "tagName": target.tag_name, "domId": target.dom_id},
+                }, ensure_ascii=False)
+            else:
+                return json.dumps({
+                    "status": "error",
+                    "msg": f"Click failed: {data.get('error', 'Unknown error') if isinstance(data, dict) else str(data)}",
+                }, ensure_ascii=False)
+        except Exception as e:
+            return json.dumps({
+                "status": "error",
+                "msg": f"Click failed: {str(e)}",
+            }, ensure_ascii=False)
+
+    return await asyncio.to_thread(_run)
+
+
+def _build_click_js_for_node(node) -> str:
+    """Build JavaScript to click on an element using DOM info for precise locating.
+
+    Priority order:
+    1. By DOM id (most precise): document.querySelector('#id')
+    2. By tag + feature classes + accessible name
+    3. By aria-label attribute
+    4. By text content match on buttons/links
+    5. By URL for link elements
+    """
+    import json as _json
+
+    dom_id = node.dom_id
+    tag_name = node.tag_name.lower() if node.tag_name else ""
+    dom_classes = node.dom_classes
+    name = node.name
+    role = node.role
+    url = node.properties.get("url", "")
+
+    # Priority 1: by DOM id (most precise)
+    if dom_id:
+        return f"""(function() {{
+            const el = document.getElementById({_json.dumps(dom_id)});
+            if (el) {{ el.click(); return {{ ok: true, tag: el.tagName, text: (el.textContent || '').trim().substring(0, 80) }}; }}
+            return {{ ok: false, error: 'Element with id "{dom_id}" not found' }};
+        }})()"""
+
+    # Priority 2: by tag + feature classes
+    if tag_name and dom_classes:
+        class_selector = ".".join(dom_classes[:3])
+        selector = f"{tag_name}.{class_selector}"
+        # If we also have a name, try matching text within the selected element
+        if name:
+            return f"""(function() {{
+                const elements = document.querySelectorAll({_json.dumps(selector)});
+                for (const el of elements) {{
+                    const text = (el.textContent || '').trim();
+                    const ariaLabel = el.getAttribute('aria-label') || '';
+                    if (text === {_json.dumps(name)} || text.startsWith({_json.dumps(name)}) || ariaLabel === {_json.dumps(name)}) {{
+                        el.click();
+                        return {{ ok: true, tag: el.tagName, text: text.substring(0, 80) }};
+                    }}
+                }}
+                // If no text match, click the first one
+                if (elements.length > 0) {{ elements[0].click(); return {{ ok: true, tag: elements[0].tagName, text: (elements[0].textContent || '').trim().substring(0, 80) }}; }}
+                return {{ ok: false, error: 'Element with selector "{selector}" not found' }};
+            }})()"""
+        else:
+            return f"""(function() {{
+                const el = document.querySelector({_json.dumps(selector)});
+                if (el) {{ el.click(); return {{ ok: true, tag: el.tagName, text: (el.textContent || '').trim().substring(0, 80) }}; }}
+                return {{ ok: false, error: 'Element with selector "{selector}" not found' }};
+            }})()"""
+
+    # Priority 3: by tag + name (text match)
+    if tag_name and name:
+        return f"""(function() {{
+            const elements = document.querySelectorAll({_json.dumps(tag_name)});
+            for (const el of elements) {{
+                const text = (el.textContent || '').trim();
+                const ariaLabel = el.getAttribute('aria-label') || '';
+                if (text === {_json.dumps(name)} || text.startsWith({_json.dumps(name)}) || ariaLabel === {_json.dumps(name)}) {{
+                    el.click();
+                    return {{ ok: true, tag: el.tagName, text: text.substring(0, 80) }};
+                }}
+            }}
+            return {{ ok: false, error: 'Element <{tag_name}> with text "{name}" not found' }};
+        }})()"""
+
+    # Priority 4: by aria-label (for accessible elements)
+    if name:
+        escaped_name = name.replace("'", "\\'")
+        return f"""(function() {{
+            let el = document.querySelector('[aria-label="{escaped_name}"]');
+            if (el) {{ el.click(); return {{ ok: true, tag: el.tagName, text: (el.textContent || '').trim().substring(0, 80) }}; }}
+            // Try by text content for buttons and links
+            const candidates = document.querySelectorAll('button, a, [role="button"], input[type="submit"]');
+            for (const elem of candidates) {{
+                const text = (elem.textContent || '').trim();
+                if (text === {_json.dumps(name)} || text.startsWith({_json.dumps(name)})) {{
+                    elem.click();
+                    return {{ ok: true, tag: elem.tagName, text: text.substring(0, 80) }};
+                }}
+            }}
+            return {{ ok: false, error: 'Element with aria-label or text "{name}" not found' }};
+        }})()"""
+
+    # Priority 5: for links, match by href
+    if url and role == "link":
+        return f"""(function() {{
+            const links = document.querySelectorAll('a[href]');
+            for (const link of links) {{
+                if (link.href === {_json.dumps(url)}) {{
+                    link.click();
+                    return {{ ok: true, tag: link.tagName, text: (link.textContent || '').trim().substring(0, 80) }};
+                }}
+            }}
+            return {{ ok: false, error: 'Link with matching URL not found' }};
+        }})()"""
+
+    # Fallback
+    backend_id = node.backend_dom_node_id
+    if backend_id:
+        return f"""(function() {{
+            return {{ ok: false, error: 'Cannot locate element without id, classes, or name. backendNodeId: {backend_id}' }};
+        }})()"""
+
+    return """(function() {
+        return { ok: false, error: 'No identifying properties to locate element' };
+    })()"""
+
+
+@mcp.tool()
+async def browser_snapshot(verbose: bool = False, file_path: str = "", switch_tab_id: str = "") -> str:
+    """Get simplified text snapshot of the current page based on the accessibility tree.
+
+    The snapshot lists page elements with unique identifiers (uid).
+    Each element includes DOM info (tagName, id, feature classes) for precise locating.
+    Always use the latest snapshot. Prefer taking a snapshot over taking a screenshot.
+
+    Args:
+        verbose: Whether to include all elements (default: only meaningful elements).
+        file_path: Absolute or relative path to save the snapshot to a .txt file.
+        switch_tab_id: Switch to this tab before taking snapshot.
+    """
+    token = _get_token()
+    def _run():
+        d = get_driver()
+        ctx = d.get_context(token)
+        sessions = d.get_all_sessions(token=token)
+        if len(sessions) == 0:
+            return json.dumps({"status": "error", "msg": "No browser tabs connected."}, ensure_ascii=False)
+
+        if switch_tab_id:
+            ctx.default_session_id = switch_tab_id
+
+        tab_id = ctx.default_session_id
+
+        ax_response = _extension_command(
+            d,
+            {"cmd": "cdp", "method": "Accessibility.getFullAXTree"},
+            tab_id=tab_id,
+            timeout=10,
+            token=token,
+        )
+
+        ax_nodes = snapshot.parse_ax_tree_response(ax_response)
+        if not ax_nodes:
+            return json.dumps({"status": "error", "msg": "Accessibility tree is empty or not available."}, ensure_ascii=False)
+
+        root = snapshot.build_tree(ax_nodes, interesting_only=not verbose)
+        if root is None:
+            return json.dumps({"status": "error", "msg": "Failed to build accessibility tree."}, ensure_ascii=False)
+
+        sid = snapshot.SnapshotIdCounter.get_and_increment()
+        snapshot.assign_uids(root, sid)
+
+        # Resolve DOM info for nodes with backendDOMNodeId
+        backend_ids = snapshot.collect_dom_info(ax_nodes)
+        if backend_ids:
+            tab_id_int = int(tab_id) if isinstance(tab_id, str) else tab_id
+            snapshot.resolve_dom_info_by_query(d, token, tab_id_int, ax_nodes, backend_ids)
+            snapshot.enrich_nodes_with_dom(root, backend_ids)
+
+        # Cache snapshot for browser_click reuse and write to temp file
+        snapshot.cache_snapshot(token, root, sid, tab_id)
+
+        text = snapshot.format_text(root, verbose=verbose)
+
+        if file_path:
+            resolved_path = file_path if os.path.isabs(file_path) else os.path.abspath(file_path)
+            snapshot.save_to_file(text, resolved_path)
+            return json.dumps({
+                "status": "success",
+                "msg": f"Saved snapshot to {resolved_path}",
+                "snapshot_file": resolved_path,
+            }, ensure_ascii=False)
+
+        return json.dumps({
+            "status": "success",
+            "snapshot": text,
+            "structured_content": snapshot.format_json(root),
+        }, ensure_ascii=False, default=str)
+
     return await asyncio.to_thread(_run)
 
 
