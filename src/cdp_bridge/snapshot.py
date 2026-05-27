@@ -7,6 +7,8 @@ and formats it as text or JSON snapshots.
 
 from __future__ import annotations
 
+import sys
+
 
 class SnapshotNode:
     """Represents a node in the accessibility snapshot tree."""
@@ -186,7 +188,7 @@ def resolve_dom_info_by_query(driver, token: str | None, tab_id: int, ax_nodes: 
                 # Populate the caller's backend_ids dict
                 backend_ids.update(dom_info)
     except Exception as e:
-        print(f"[snapshot] resolve_dom_info_by_query failed: {e}")
+        print(f"[snapshot] resolve_dom_info_by_query failed: {e}", file=sys.stderr, flush=True)
 
     return backend_ids
 
