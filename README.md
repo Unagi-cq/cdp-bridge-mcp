@@ -123,18 +123,19 @@ graph TB
 
 ## 可用工具
 
-MCP 服务当前暴露以下工具：
+MCP 服务当前暴露以下 9 个工具：
 
-| 工具名 | 说明 |
-| --- | --- |
-| `browser_get_tabs` | 获取已连接标签页列表 |
-| `browser_scan` | 扫描当前页面内容，可返回简化 HTML 或纯文本 |
-| `browser_execute_js` | 在当前标签页执行 JavaScript |
-| `browser_switch_tab` | 切换 MCP 活动标签页，不改变用户当前可见的 Chrome 标签页 |
-| `browser_batch` | 批量执行扩展/CDP 命令，适合需要复用 CDP 上下文的复杂操作 |
-| `browser_wait` | 轮询 JavaScript 条件直到返回真值或超时 |
-| `browser_navigate` | 跳转当前标签页到指定 URL |
-| `browser_screenshot` | 获取页面截图 |
+| 工具名 | 参数 | 说明 |
+| --- | --- | --- |
+| `browser_get_tabs` | 无 | 获取所有已连接的浏览器标签页，返回标签页 ID、URL 和标题列表，以及当前活动标签页 |
+| `browser_scan` | `tabs_only` (bool), `switch_tab_id` (str), `text_only` (bool) | 扫描活动标签页内容。`tabs_only` 仅返回标签页列表节省 token；`text_only` 返回纯文本而非简化 HTML；`switch_tab_id` 在扫描前先切换到指定标签页 |
+| `browser_execute_js` | `script` (str, 必填), `switch_tab_id` (str), `no_monitor` (bool) | 在浏览器中执行 JavaScript 并捕获返回值及 DOM 变更 diff。`no_monitor` 跳过 DOM 监控可提速；`switch_tab_id` 先切换到目标标签页再执行 |
+| `browser_switch_tab` | `tab_id` (str, 必填) | 切换 MCP 侧的活动标签页（不改变用户在 Chrome 中看到的标签页），后续工具调用将作用于该标签页 |
+| `browser_focus_tab` | `tab_id` (str, 必填) | 将 Chrome 标签页置于前台并聚焦窗口，使标签页对用户可见。区别于 `browser_switch_tab`（仅切换 MCP 侧会话），此工具会实际激活 Chrome 窗口和标签页 |
+| `browser_batch` | `commands` (list[dict], 必填), `tab_id` (str), `timeout` (float) | 一次请求批量执行多个扩展/CDP 命令，适合需要复用 CDP 上下文的复杂操作链 |
+| `browser_wait` | `condition_js` (str, 必填), `timeout` (float), `interval` (float), `switch_tab_id` (str) | 轮询等待 JavaScript 条件表达式返回真值。`timeout` 最长等待秒数（默认 10）；`interval` 检查间隔秒数（默认 0.5） |
+| `browser_navigate` | `url` (str, 必填) | 导航活动标签页到指定 URL |
+| `browser_screenshot` | `tab_id` (str) | 对活动标签页截图，返回 base64 编码的 PNG 图片数据 |
 
 # 快速使用
 

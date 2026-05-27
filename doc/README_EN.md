@@ -123,18 +123,19 @@ graph TB
 
 ## Available Tools
 
-The MCP service currently exposes these tools:
+The MCP service currently exposes 9 tools:
 
-| Tool | Description |
-| --- | --- |
-| `browser_get_tabs` | Get the list of connected browser tabs |
-| `browser_scan` | Scan the active page as simplified HTML or plain text |
-| `browser_execute_js` | Execute JavaScript in the active tab |
-| `browser_switch_tab` | Switch the active MCP tab without changing the user's visible Chrome tab |
-| `browser_batch` | Run extension/CDP commands in a single request, ideal for complex flows that reuse CDP context |
-| `browser_wait` | Poll a JavaScript condition until it returns a truthy value or times out |
-| `browser_navigate` | Navigate the active tab to a URL |
-| `browser_screenshot` | Capture a page screenshot |
+| Tool | Parameters | Description |
+| --- | --- | --- |
+| `browser_get_tabs` | None | Get all connected browser tabs with their IDs, URLs, and titles, plus the currently active tab |
+| `browser_scan` | `tabs_only` (bool), `switch_tab_id` (str), `text_only` (bool) | Scan the active tab's content. `tabs_only` returns only the tab list to save tokens; `text_only` returns plain text instead of simplified HTML; `switch_tab_id` switches to the given tab before scanning |
+| `browser_execute_js` | `script` (str, required), `switch_tab_id` (str), `no_monitor` (bool) | Execute JavaScript in the browser and capture the return value plus DOM change diff. `no_monitor` skips DOM monitoring for speed; `switch_tab_id` switches to the target tab first |
+| `browser_switch_tab` | `tab_id` (str, required) | Switch the MCP-side active tab (does not change what the user sees in Chrome). Subsequent tool calls will target this tab |
+| `browser_focus_tab` | `tab_id` (str, required) | Bring a Chrome tab to the foreground and focus its window, making it visible to the user. Unlike `browser_switch_tab` (which only changes the MCP-side session), this actually activates the Chrome window and tab |
+| `browser_batch` | `commands` (list[dict], required), `tab_id` (str), `timeout` (float) | Run multiple extension/CDP commands in a single request, ideal for complex operation chains that reuse CDP context |
+| `browser_wait` | `condition_js` (str, required), `timeout` (float), `interval` (float), `switch_tab_id` (str) | Poll a JavaScript condition expression until it returns a truthy value. `timeout` max wait in seconds (default 10); `interval` check interval in seconds (default 0.5) |
+| `browser_navigate` | `url` (str, required) | Navigate the active tab to a URL |
+| `browser_screenshot` | `tab_id` (str) | Capture a screenshot of the active tab, returns base64-encoded PNG image data |
 
 # Quick Start
 
