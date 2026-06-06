@@ -15,7 +15,7 @@ document.querySelectorAll('meta[http-equiv="Content-Security-Policy"]').forEach(
   d.innerHTML='<span class="ljq-ind-dot"></span><span class="ljq-ind-text">CDP Bridge</span>';
   const style=document.createElement('style');
   style.textContent=`
-    #ljq-ind{position:fixed;right:14px;bottom:14px;display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 11px;border:1px solid rgba(18,24,38,.10);border-radius:999px;background:rgba(255,255,255,.92);color:#182033;font:500 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;letter-spacing:0;box-shadow:0 6px 18px rgba(18,24,38,.12);z-index:2147483647;cursor:pointer;user-select:none;opacity:.82;backdrop-filter:saturate(140%) blur(10px);-webkit-backdrop-filter:saturate(140%) blur(10px);transition:opacity .16s ease, transform .16s ease, box-shadow .16s ease, border-color .16s ease;}
+    #ljq-ind{position:fixed;right:14px;bottom:14px;display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 11px;border:1px solid rgba(18,24,38,.10);border-radius:999px;background:rgba(255,255,255,.92);color:#182033;font:500 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;letter-spacing:0;box-shadow:0 6px 18px rgba(18,24,38,.12);z-index:2147483647;cursor:grab;user-select:none;opacity:.82;backdrop-filter:saturate(140%) blur(10px);-webkit-backdrop-filter:saturate(140%) blur(10px);transition:opacity .16s ease, transform .16s ease, box-shadow .16s ease, border-color .16s ease;}
     #ljq-ind:hover{opacity:1;transform:translateY(-1px);border-color:rgba(23,122,92,.22);box-shadow:0 10px 24px rgba(18,24,38,.16);}
     #ljq-ind:active{transform:translateY(0);box-shadow:0 4px 12px rgba(18,24,38,.14);}
     #ljq-ind .ljq-ind-dot{width:7px;height:7px;border-radius:50%;background:#18a058;box-shadow:0 0 0 3px rgba(24,160,88,.14);flex:0 0 auto;}
@@ -44,7 +44,37 @@ document.querySelectorAll('meta[http-equiv="Content-Security-Policy"]').forEach(
     setTimeout(()=>n.classList.remove('is-visible'),3200);
     setTimeout(()=>n.remove(),3450);
   }
-  d.addEventListener('click',()=>showBridgeNotice('会话活跃\nURL: '+location.href));
+  // Drag support — make the badge draggable
+  let _dragging=false,_hasDragged=false,_sX,_sY,_sL,_sT;
+  function _start(cx,cy,e){
+    _dragging=true;_hasDragged=false;
+    const r=d.getBoundingClientRect();
+    _sX=cx;_sY=cy;_sL=r.left;_sT=r.top;
+    e.preventDefault();
+  }
+  function _move(cx,cy){
+    if(!_dragging)return;
+    const dx=cx-_sX,dy=cy-_sY;
+    if(!_hasDragged&&(Math.abs(dx)>3||Math.abs(dy)>3)){
+      _hasDragged=true;
+      d.style.left=_sL+'px';d.style.top=_sT+'px';
+      d.style.right='auto';d.style.bottom='auto';
+      d.style.cursor='grabbing';d.style.transition='none';
+    }
+    if(_hasDragged){d.style.left=(_sL+dx)+'px';d.style.top=(_sT+dy)+'px';}
+  }
+  function _end(){
+    if(!_dragging)return;
+    _dragging=false;
+    if(_hasDragged){d.style.cursor='grab';d.style.transition='';d._preventClick=true;}
+  }
+  d.addEventListener('mousedown',e=>{if(e.button===0)_start(e.clientX,e.clientY,e);});
+  d.addEventListener('touchstart',e=>{const t=e.touches[0];_start(t.clientX,t.clientY,e);},{passive:false});
+  document.addEventListener('mousemove',e=>_move(e.clientX,e.clientY));
+  document.addEventListener('touchmove',e=>{const t=e.touches[0];_move(t.clientX,t.clientY);},{passive:false});
+  document.addEventListener('mouseup',_end);
+  document.addEventListener('touchend',_end);
+  d.addEventListener('click',()=>{if(d._preventClick){d._preventClick=false;return;}showBridgeNotice('会话活跃\nURL: '+location.href);});
   (document.head||document.documentElement).appendChild(style);
   (document.body||document.documentElement).appendChild(d);
 })();
