@@ -311,20 +311,23 @@ async def save_screenshot(screenshot_json_str_or_file: str, output_path: str = "
     """
     def _run():
         try:
+            from datetime import datetime
+
             # Determine if input is a file path or JSON string
-            input_path = Path(screenshot_json)
+            input_path = Path(screenshot_json_str_or_file)
             if input_path.exists() and input_path.is_file():
                 with open(input_path, "r", encoding="utf-8") as f:
                     content = f.read()
             else:
-                content = screenshot_json
+                content = screenshot_json_str_or_file
+                input_path = None
 
             # Parse the screenshot JSON result
             data = json.loads(content)
 
             # Handle nested result structure: {"status": "success", "result": "{...}"}
             result_str = data.get("result", "")
-            if result_str:
+            if isinstance(result_str, str) and result_str.startswith("{"):
                 data = json.loads(result_str)
 
             # Extract base64 data
@@ -339,10 +342,8 @@ async def save_screenshot(screenshot_json_str_or_file: str, output_path: str = "
             if output_path:
                 save_path = Path(output_path)
             else:
-                from datetime import datetime
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                # Derive output name from input file if available
-                if input_path.exists():
+                if input_path:
                     save_path = input_path.parent / f"{input_path.stem}.png"
                 else:
                     save_path = Path.cwd() / f"screenshot_{timestamp}.png"
