@@ -2,3 +2,4 @@
 /.venv/
 /src/cdp_bridge.egg-info/
 /.idea/
+/src/cdp_bridge/__pycache__/

@@ -17,6 +17,12 @@ def main():
         help="MCP transport to use. Defaults to stdio.",
     )
     parser.add_argument(
+        "--host",
+        type=str,
+        default="127.0.0.1",
+        help="HTTP host for streamable-http transport. Defaults to 127.0.0.1.",
+    )
+    parser.add_argument(
         "--port",
         type=int,
         default=8000,
@@ -34,13 +40,30 @@ def main():
         default="",
         help="Comma-separated list of allowed tokens. Empty = accept any token.",
     )
+
     args = parser.parse_args()
 
     # Parse allowed tokens from arg or env
     tokens_str = args.tokens or os.environ.get("CDP_BRIDGE_TOKENS", "")
     allowed_tokens = [t.strip() for t in tokens_str.split(",") if t.strip()] or None
 
+    mcp.settings.host = args.host
     mcp.settings.port = args.port
+
+    if args.transport == "streamable-http" and args.host != "127.0.0.1" and args.host != "localhost":
+        from mcp.server.fastmcp.server import TransportSecuritySettings
+
+        if args.host == "0.0.0.0":
+            # 配置为所有网卡ip，则直接关闭FastMCP DNS rebinding防护
+            mcp.settings.transport_security = TransportSecuritySettings(
+                enable_dns_rebinding_protection=False,
+            )
+        else:
+            # 根据配置的--host推断FastMCP DNS rebinding防护规则，如--host配置为192.168.0.1，则规则为"192.168.0.1:*"
+            mcp.settings.transport_security = TransportSecuritySettings(
+                enable_dns_rebinding_protection=True,
+                allowed_hosts=[f"{args.host}:*"],
+            )
 
     if args.transport == "streamable-http":
         configure_driver(websocket_port=args.ws_port, multi_user=True, allowed_tokens=allowed_tokens)

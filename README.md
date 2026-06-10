@@ -221,6 +221,7 @@ CDP Bridge 支持两种 MCP 传输模式，可根据使用场景选择：
 | `--ws-port` | `18765` | 两种模式 | 浏览器扩展连接的 WebSocket 端口。无论使用 `stdio` 还是 `streamable-http`，都可以配置。 |
 | `--port` | `8000` | 仅 `streamable-http` | MCP HTTP 服务端口。只在 `--transport streamable-http` 时使用，客户端连接地址是 `http://127.0.0.1:<port>/mcp`。 |
 | `--tokens` | 空 | 仅 `streamable-http` | 允许接入的 token 白名单，多个 token 用英文逗号分隔；为空时接受任意 token。 |
+| --host | 127.0.0.1 | 仅 `streamable-http` | 默认`streamable-http`启动时监听的是127.0.0.1，无法进行远程访问。通过增加该参数，可指定监听的ip，可配置为0.0.0.0监听所有网卡的ip。 |
 
 注意：`--ws-port` 是浏览器扩展连接后端的端口；`--port` 是 MCP 客户端连接后端的 HTTP 端口。两者不是同一个端口。
 
@@ -241,6 +242,9 @@ uvx cdp-bridge@latest --transport streamable-http --port 8000 --ws-port 18767
 
 # streamable-http 模式，只允许指定 token 接入
 uvx cdp-bridge@latest --transport streamable-http --port 8000 --tokens "team_alice,team_bob"
+
+# streamable-http 模式，同时指定 MCP HTTP 端口和监听的ip，远程机器可通过172.25.240.1:8000访问运行的MCP Server
+uvx cdp-bridge@latest --transport streamable-http --host 172.25.240.1 --port 8000
 
 # 也可以通过环境变量传入 token 白名单
 CDP_BRIDGE_TOKENS="team_alice,team_bob" uvx cdp-bridge@latest --transport streamable-http --port 8000
@@ -394,7 +398,7 @@ codex mcp add cdp-bridge --transport streamable-http --url http://127.0.0.1:8000
 openclaw mcp set cdp-bridge '{"command":"uvx","args":["cdp-bridge@latest"]}'
 
 # streamable-http 模式
-openclaw mcp set cdp-bridge '{"type":"streamableHttp","url":"http://127.0.0.1:8000/mcp"}'
+openclaw mcp set cdp-bridge '{"transport":"streamable-http","url":"http://remoteip:8000/mcp"}'
 ```
 
 等价的 stdio 配置结构：
