@@ -123,7 +123,7 @@ graph TB
 
 ## 可用工具
 
-MCP 服务当前暴露以下 9 个工具：
+MCP 服务当前暴露以下 10 个工具：
 
 | 工具名 | 参数 | 说明 |
 | --- | --- | --- |
@@ -136,6 +136,7 @@ MCP 服务当前暴露以下 9 个工具：
 | `browser_wait` | `condition_js` (str, 必填), `timeout` (float), `interval` (float), `switch_tab_id` (str) | 轮询等待 JavaScript 条件表达式返回真值。`timeout` 最长等待秒数（默认 10）；`interval` 检查间隔秒数（默认 0.5） |
 | `browser_navigate` | `url` (str, 必填) | 导航活动标签页到指定 URL |
 | `browser_screenshot` | `tab_id` (str) | 对活动标签页截图，返回 base64 编码的 PNG 图片数据 |
+| `browser_save_image` | `screenshot_json_str_or_file` (str, 必填), `output_path` (str) | 将 `browser_screenshot` 返回的 base64 截图数据保存为本地 PNG 文件。`screenshot_json_str_or_file` 为截图 JSON 字符串或 JSON 文件路径；`output_path` 为输出路径或目录 |
 
 # 快速使用
 

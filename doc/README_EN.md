@@ -123,7 +123,7 @@ graph TB
 
 ## Available Tools
 
-The MCP service currently exposes 9 tools:
+The MCP service currently exposes 10 tools:
 
 | Tool | Parameters | Description |
 | --- | --- | --- |
@@ -136,6 +136,7 @@ The MCP service currently exposes 9 tools:
 | `browser_wait` | `condition_js` (str, required), `timeout` (float), `interval` (float), `switch_tab_id` (str) | Poll a JavaScript condition expression until it returns a truthy value. `timeout` max wait in seconds (default 10); `interval` check interval in seconds (default 0.5) |
 | `browser_navigate` | `url` (str, required) | Navigate the active tab to a URL |
 | `browser_screenshot` | `tab_id` (str) | Capture a screenshot of the active tab, returns base64-encoded PNG image data |
+| `browser_save_image` | `screenshot_json_str_or_file` (str, required), `output_path` (str) | Save the base64 screenshot data from `browser_screenshot` as a local PNG file. `screenshot_json_str_or_file` is the screenshot JSON string or JSON file path; `output_path` is the output file path or directory |
 
 # Quick Start
 

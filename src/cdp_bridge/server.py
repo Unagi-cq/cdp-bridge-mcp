@@ -297,7 +297,7 @@ async def browser_screenshot(tab_id: str = "") -> str:
 
 
 @mcp.tool()
-async def save_screenshot(screenshot_json_str_or_file: str, output_path: str = "") -> str:
+async def browser_save_image(screenshot_json_str_or_file: str, output_path: str = "") -> str:
     """Save base64 screenshot data to PNG file.
 
     Args:
