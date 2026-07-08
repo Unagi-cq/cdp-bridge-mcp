@@ -6,21 +6,25 @@ document.querySelectorAll('meta[http-equiv="Content-Security-Policy"]').forEach(
 // Indicator badge at bottom-right (userscript style)
 (function(){
   if(window.self!==window.top)return;
-  if(document.getElementById('ljq-ind'))return;
-  const d=document.createElement('div');
-  d.id='ljq-ind';
-  d.setAttribute('role','button');
-  d.setAttribute('aria-label','CDP Bridge connected');
-  d.title='CDP Bridge 已连接';
-  d.innerHTML='<span class="ljq-ind-dot"></span><span class="ljq-ind-text">CDP Bridge</span>';
-  const style=document.createElement('style');
-  style.textContent=`
-    #ljq-ind{position:fixed;right:14px;bottom:14px;display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 11px;border:1px solid rgba(18,24,38,.10);border-radius:999px;background:rgba(255,255,255,.92);color:#182033;font:500 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;letter-spacing:0;box-shadow:0 6px 18px rgba(18,24,38,.12);z-index:2147483647;cursor:grab;user-select:none;opacity:.82;backdrop-filter:saturate(140%) blur(10px);-webkit-backdrop-filter:saturate(140%) blur(10px);transition:opacity .16s ease, transform .16s ease, box-shadow .16s ease, border-color .16s ease;}
-    #ljq-ind:hover{opacity:1;transform:translateY(-1px);border-color:rgba(23,122,92,.22);box-shadow:0 10px 24px rgba(18,24,38,.16);}
-    #ljq-ind:active{transform:translateY(0);box-shadow:0 4px 12px rgba(18,24,38,.14);}
-    #ljq-ind .ljq-ind-dot{width:7px;height:7px;border-radius:50%;background:#18a058;box-shadow:0 0 0 3px rgba(24,160,88,.14);flex:0 0 auto;}
-    #ljq-ind .ljq-ind-text{white-space:nowrap;}
-  `;
+
+  let badgeEl=null;
+
+  function createStyle(){
+    if(document.getElementById('ljq-ind-style'))return;
+    const style=document.createElement('style');
+    style.id='ljq-ind-style';
+    style.textContent=`
+      #ljq-ind{position:fixed;right:14px;bottom:14px;display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 11px;border:1px solid rgba(18,24,38,.10);border-radius:999px;background:rgba(255,255,255,.92);color:#182033;font:500 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;letter-spacing:0;box-shadow:0 6px 18px rgba(18,24,38,.12);z-index:2147483647;cursor:grab;user-select:none;opacity:.82;backdrop-filter:saturate(140%) blur(10px);-webkit-backdrop-filter:saturate(140%) blur(10px);transition:opacity .16s ease, transform .16s ease, box-shadow .16s ease, border-color .16s ease;}
+      #ljq-ind:hover{opacity:1;transform:translateY(-1px);border-color:rgba(23,122,92,.22);box-shadow:0 10px 24px rgba(18,24,38,.16);}
+      #ljq-ind:active{transform:translateY(0);box-shadow:0 4px 12px rgba(18,24,38,.14);}
+      #ljq-ind .ljq-ind-dot{width:7px;height:7px;border-radius:50%;background:#18a058;box-shadow:0 0 0 3px rgba(24,160,88,.14);flex:0 0 auto;}
+      #ljq-ind .ljq-ind-text{white-space:nowrap;}
+      #ljq-ind .ljq-ind-close{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;margin-left:1px;border-radius:50%;font-size:13px;line-height:1;color:#8e98a9;cursor:pointer;flex:0 0 auto;transition:color .12s ease,background .12s ease;}
+      #ljq-ind .ljq-ind-close:hover{color:#4c566a;background:rgba(18,24,38,.07);}
+    `;
+    (document.head||document.documentElement).appendChild(style);
+  }
+
   function showBridgeNotice(message){
     if(!document.getElementById('tmwd-bridge-notice-style')){
       const s=document.createElement('style');
@@ -44,39 +48,83 @@ document.querySelectorAll('meta[http-equiv="Content-Security-Policy"]').forEach(
     setTimeout(()=>n.classList.remove('is-visible'),3200);
     setTimeout(()=>n.remove(),3450);
   }
-  // Drag support — make the badge draggable
-  let _dragging=false,_hasDragged=false,_sX,_sY,_sL,_sT;
-  function _start(cx,cy,e){
-    _dragging=true;_hasDragged=false;
-    const r=d.getBoundingClientRect();
-    _sX=cx;_sY=cy;_sL=r.left;_sT=r.top;
-    e.preventDefault();
-  }
-  function _move(cx,cy){
-    if(!_dragging)return;
-    const dx=cx-_sX,dy=cy-_sY;
-    if(!_hasDragged&&(Math.abs(dx)>3||Math.abs(dy)>3)){
-      _hasDragged=true;
-      d.style.left=_sL+'px';d.style.top=_sT+'px';
+
+  function createBadge(savedPosition){
+    if(document.getElementById('ljq-ind'))return;
+    createStyle();
+
+    const d=document.createElement('div');
+    d.id='ljq-ind';
+    d.setAttribute('role','button');
+    d.setAttribute('aria-label','CDP Bridge connected');
+    d.title='CDP Bridge 已连接';
+    d.innerHTML='<span class="ljq-ind-dot"></span><span class="ljq-ind-text">CDP Bridge</span><span class="ljq-ind-close" title="关闭浮标">×</span>';
+
+    if(savedPosition){
+      d.style.left=savedPosition.left+'px';d.style.top=savedPosition.top+'px';
       d.style.right='auto';d.style.bottom='auto';
-      d.style.cursor='grabbing';d.style.transition='none';
     }
-    if(_hasDragged){d.style.left=(_sL+dx)+'px';d.style.top=(_sT+dy)+'px';}
+
+    let _dragging=false,_hasDragged=false,_sX,_sY,_sL,_sT;
+    function _start(cx,cy,e){
+      _dragging=true;_hasDragged=false;
+      const r=d.getBoundingClientRect();
+      _sX=cx;_sY=cy;_sL=r.left;_sT=r.top;
+      e.preventDefault();
+    }
+    function _move(cx,cy){
+      if(!_dragging)return;
+      const dx=cx-_sX,dy=cy-_sY;
+      if(!_hasDragged&&(Math.abs(dx)>3||Math.abs(dy)>3)){
+        _hasDragged=true;
+        d.style.left=_sL+'px';d.style.top=_sT+'px';
+        d.style.right='auto';d.style.bottom='auto';
+        d.style.cursor='grabbing';d.style.transition='none';
+      }
+      if(_hasDragged){d.style.left=(_sL+dx)+'px';d.style.top=(_sT+dy)+'px';}
+    }
+    function _end(){
+      if(!_dragging)return;
+      _dragging=false;
+      if(_hasDragged){
+        d.style.cursor='grab';d.style.transition='';
+        d._preventClick=true;
+        const r=d.getBoundingClientRect();
+        chrome.storage.local.set({badgePosition:{left:r.left,top:r.top}});
+      }
+    }
+    d.addEventListener('mousedown',e=>{if(e.button===0)_start(e.clientX,e.clientY,e);});
+    d.addEventListener('touchstart',e=>{const t=e.touches[0];_start(t.clientX,t.clientY,e);},{passive:false});
+    document.addEventListener('mousemove',e=>_move(e.clientX,e.clientY));
+    document.addEventListener('touchmove',e=>{const t=e.touches[0];_move(t.clientX,t.clientY);},{passive:false});
+    document.addEventListener('mouseup',_end);
+    document.addEventListener('touchend',_end);
+    d.querySelector('.ljq-ind-close').addEventListener('click',e=>{e.stopPropagation();hideBadge();});
+    d.addEventListener('click',()=>{if(d._preventClick){d._preventClick=false;return;}showBridgeNotice('会话活跃\nURL: '+location.href);});
+    (document.body||document.documentElement).appendChild(d);
+    badgeEl=d;
   }
-  function _end(){
-    if(!_dragging)return;
-    _dragging=false;
-    if(_hasDragged){d.style.cursor='grab';d.style.transition='';d._preventClick=true;}
+
+  function hideBadge(){
+    if(badgeEl){badgeEl.remove();badgeEl=null;}
+    chrome.storage.local.set({badgeHidden:true});
   }
-  d.addEventListener('mousedown',e=>{if(e.button===0)_start(e.clientX,e.clientY,e);});
-  d.addEventListener('touchstart',e=>{const t=e.touches[0];_start(t.clientX,t.clientY,e);},{passive:false});
-  document.addEventListener('mousemove',e=>_move(e.clientX,e.clientY));
-  document.addEventListener('touchmove',e=>{const t=e.touches[0];_move(t.clientX,t.clientY);},{passive:false});
-  document.addEventListener('mouseup',_end);
-  document.addEventListener('touchend',_end);
-  d.addEventListener('click',()=>{if(d._preventClick){d._preventClick=false;return;}showBridgeNotice('会话活跃\nURL: '+location.href);});
-  (document.head||document.documentElement).appendChild(style);
-  (document.body||document.documentElement).appendChild(d);
+
+  function showBadge(){
+    chrome.storage.local.set({badgeHidden:false});
+    createBadge(null);
+  }
+
+  chrome.storage.local.get(['badgePosition','badgeHidden'],stored=>{
+    if(!stored.badgeHidden)createBadge(stored.badgePosition);
+  });
+
+  chrome.storage.onChanged.addListener(changes=>{
+    if(changes.badgeHidden){
+      if(changes.badgeHidden.newValue)hideBadge();
+      else showBadge();
+    }
+  });
 })();
 
 new MutationObserver(muts => {

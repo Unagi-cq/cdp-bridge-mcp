@@ -7,10 +7,12 @@ const DEFAULT_CONFIG = {
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveBridge').addEventListener('click', saveBridgeConfig);
   document.getElementById('genToken').addEventListener('click', generateToken);
+  document.getElementById('toggleBadge').addEventListener('click', toggleBadge);
   for (const id of ['bridgeHost', 'bridgePort']) {
     document.getElementById(id).addEventListener('input', updatePreview);
   }
   loadBridgeConfig();
+  loadBadgeState();
 });
 
 async function loadBridgeConfig() {
@@ -63,6 +65,23 @@ async function saveBridgeConfig() {
     document.getElementById('bridgeToken').value = resp.data.bridgeToken;
   }
   state.textContent = 'Bridge config saved';
+}
+
+function updateBadgeButton(visible) {
+  const btn = document.getElementById('toggleBadge');
+  btn.textContent = visible ? '隐藏浮标' : '显示浮标';
+}
+
+async function loadBadgeState() {
+  const stored = await chrome.storage.local.get(['badgeHidden']);
+  updateBadgeButton(!stored.badgeHidden);
+}
+
+async function toggleBadge() {
+  const stored = await chrome.storage.local.get(['badgeHidden']);
+  const newHidden = !stored.badgeHidden;
+  await chrome.storage.local.set({ badgeHidden: newHidden });
+  updateBadgeButton(!newHidden);
 }
 
 function generateToken() {
