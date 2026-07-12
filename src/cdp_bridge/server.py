@@ -44,11 +44,37 @@ def _normalize_tab_id(tab_id: str | int | None) -> int | None:
     return int(tab_id)
 
 
+def _require_tab(d: TMWebDriver, tab_id: str | int, token: str | None = None):
+    normalized_tab_id = _normalize_tab_id(tab_id)
+    if normalized_tab_id is None:
+        raise ValueError("tab_id is required")
+    session_id = str(normalized_tab_id)
+    session = next(
+        (item for item in d.get_all_sessions(token=token) if str(item.get("id")) == session_id),
+        None,
+    )
+    if session is None:
+        raise ValueError(f"Tab {session_id} not found or disconnected.")
+    return session_id, session
+
+
+def _select_tab(d: TMWebDriver, tab_id: str | int, token: str | None = None):
+    session_id, session = _require_tab(d, tab_id, token=token)
+    d.get_context(token).default_session_id = session_id
+    return session_id, session
+
+
 def _extension_command(d: TMWebDriver, cmd: dict[str, Any], tab_id: str | int | None = None, timeout: float = 15, token: str | None = None) -> Any:
     normalized_tab_id = _normalize_tab_id(tab_id)
     if normalized_tab_id is not None and "tabId" not in cmd:
         cmd["tabId"] = normalized_tab_id
-    result = d.execute_js(json.dumps(cmd, ensure_ascii=False), timeout=timeout, token=token)
+    session_id = str(normalized_tab_id) if normalized_tab_id is not None else None
+    result = d.execute_js(
+        json.dumps(cmd, ensure_ascii=False),
+        timeout=timeout,
+        session_id=session_id,
+        token=token,
+    )
     return result.get("data", result)
 
 
@@ -84,7 +110,10 @@ async def browser_scan(tabs_only: bool = False, switch_tab_id: str = "", text_on
             return json.dumps({"status": "error", "msg": "No browser tabs connected. Ensure Chrome extension is running."}, ensure_ascii=False)
 
         if switch_tab_id:
-            ctx.default_session_id = switch_tab_id
+            try:
+                _select_tab(d, switch_tab_id, token=token)
+            except ValueError as e:
+                return json.dumps({"status": "error", "msg": str(e)}, ensure_ascii=False)
 
         tabs = []
         for sess in d.get_all_sessions(token=token):
@@ -116,11 +145,13 @@ async def browser_execute_js(script: str, switch_tab_id: str = "", no_monitor: b
     token = _get_token()
     def _run():
         d = get_driver()
-        ctx = d.get_context(token)
         if len(d.get_all_sessions(token=token)) == 0:
             return json.dumps({"status": "error", "msg": "No browser tabs connected."}, ensure_ascii=False)
         if switch_tab_id:
-            ctx.default_session_id = switch_tab_id
+            try:
+                _select_tab(d, switch_tab_id, token=token)
+            except ValueError as e:
+                return json.dumps({"status": "error", "msg": str(e)}, ensure_ascii=False)
         importlib.reload(simphtml)
         result = simphtml.execute_js_rich(script, d, no_monitor=no_monitor, token=token)
         return json.dumps(result, ensure_ascii=False, default=str)
@@ -137,16 +168,15 @@ async def browser_switch_tab(tab_id: str) -> str:
     token = _get_token()
     def _run():
         d = get_driver()
-        ctx = d.get_context(token)
         _ensure_sessions(d, token=token)
-        ctx.default_session_id = tab_id
-        session = ctx.sessions.get(tab_id)
-        if not session or not session.is_active():
-            return json.dumps({"status": "error", "msg": f"Tab {tab_id} not found or disconnected."}, ensure_ascii=False)
+        try:
+            session_id, session = _select_tab(d, tab_id, token=token)
+        except ValueError as e:
+            return json.dumps({"status": "error", "msg": str(e)}, ensure_ascii=False)
         return json.dumps({
             "status": "success",
-            "active_tab": tab_id,
-            "url": session.info.get('url', ''),
+            "active_tab": session_id,
+            "url": session.get('url', ''),
         }, ensure_ascii=False, default=str)
     return await asyncio.to_thread(_run)
 
@@ -167,23 +197,27 @@ async def browser_focus_tab(tab_id: str) -> str:
     Args:
         tab_id: The tab ID to focus (from browser_get_tabs).
     """
+    token = _get_token()
     def _run():
         d = get_driver()
-        _ensure_sessions(d)
-        normalized = _normalize_tab_id(tab_id)
-        if normalized is None:
-            return json.dumps({"status": "error", "msg": "tab_id is required"}, ensure_ascii=False)
+        _ensure_sessions(d, token=token)
+        try:
+            session_id, _ = _require_tab(d, tab_id, token=token)
+        except ValueError as e:
+            return json.dumps({"status": "error", "msg": str(e)}, ensure_ascii=False)
         result = _extension_command(
             d,
-            {"cmd": "tabs", "method": "switch", "tabId": normalized},
+            {"cmd": "tabs", "method": "switch"},
+            tab_id=session_id,
             timeout=10,
+            token=token,
         )
         # User asked us to bring this tab to the front — they will most likely
         # operate on it next, so sync the MCP-side active session too.
-        d.default_session_id = tab_id
+        d.get_context(token).default_session_id = session_id
         return json.dumps({
             "status": "success",
-            "focused_tab": tab_id,
+            "focused_tab": session_id,
             "extension_response": result,
         }, ensure_ascii=False, default=str)
     return await asyncio.to_thread(_run)
@@ -203,6 +237,11 @@ async def browser_batch(commands: list[dict[str, Any]], tab_id: str = "", timeou
     def _run():
         d = get_driver()
         _ensure_sessions(d, token=token)
+        if tab_id:
+            try:
+                _require_tab(d, tab_id, token=token)
+            except ValueError as e:
+                return json.dumps({"status": "error", "msg": str(e)}, ensure_ascii=False)
         result = _extension_command(d, {"cmd": "batch", "commands": commands}, tab_id=tab_id, timeout=timeout, token=token)
         return json.dumps({"status": "success", "results": result}, ensure_ascii=False, default=str)
     return await asyncio.to_thread(_run)
@@ -224,7 +263,10 @@ async def browser_wait(condition_js: str, timeout: float = 10, interval: float =
         ctx = d.get_context(token)
         _ensure_sessions(d, token=token)
         if switch_tab_id:
-            ctx.default_session_id = switch_tab_id
+            try:
+                _select_tab(d, switch_tab_id, token=token)
+            except ValueError as e:
+                return json.dumps({"status": "error", "msg": str(e)}, ensure_ascii=False)
         deadline = time.time() + max(timeout, 0)
         last_value = None
         last_error = None
@@ -287,9 +329,11 @@ async def browser_screenshot(tab_id: str = "") -> str:
             return json.dumps({"status": "error", "msg": "No browser tabs connected."}, ensure_ascii=False)
         cmd = {"cmd": "cdp", "method": "Page.captureScreenshot", "params": {"format": "png"}}
         if tab_id:
-            cmd["tabId"] = int(tab_id)
-        result = d.execute_js(json.dumps(cmd), token=token)
-        data = result.get('data', {})
+            try:
+                _require_tab(d, tab_id, token=token)
+            except ValueError as e:
+                return json.dumps({"status": "error", "msg": str(e)}, ensure_ascii=False)
+        data = _extension_command(d, cmd, tab_id=tab_id, token=token)
         if isinstance(data, dict) and 'data' in data:
             return json.dumps({"status": "success", "format": "png", "base64": data['data']}, ensure_ascii=False)
         return json.dumps({"status": "success", "data": data}, ensure_ascii=False, default=str)
@@ -316,13 +360,17 @@ async def browser_save_image(screenshot_json_str_or_file: str, output_path: str 
             from datetime import datetime
 
             # Determine if input is a file path or JSON string
-            input_path = Path(screenshot_json_str_or_file)
-            if input_path.exists() and input_path.is_file():
-                with open(input_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-            else:
-                content = screenshot_json_str_or_file
-                input_path = None
+            content = screenshot_json_str_or_file
+            input_path = None
+            if not content.lstrip().startswith(("{", "[")):
+                candidate = Path(content).expanduser()
+                try:
+                    if candidate.is_file():
+                        input_path = candidate
+                        content = candidate.read_text(encoding="utf-8")
+                except OSError:
+                    # Non-path input (for example, a very large JSON string).
+                    pass
 
             # Parse the screenshot JSON result
             data = json.loads(content)
@@ -338,7 +386,7 @@ async def browser_save_image(screenshot_json_str_or_file: str, output_path: str 
                 return json.dumps({"status": "error", "msg": "No base64 data found in screenshot JSON"}, ensure_ascii=False)
 
             # Decode base64
-            img_data = base64.b64decode(b64_data)
+            img_data = base64.b64decode(b64_data, validate=True)
 
             # Determine output path
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
