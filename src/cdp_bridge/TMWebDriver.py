@@ -26,7 +26,8 @@ class Session:
     @property
     def url(self): return self.info.get('url', '')
     def is_active(self):
-        if self.type == 'http' and time.time() - self.connect_at > 60: self.mark_disconnected()
+        if self.type == 'http' and self.disconnect_at is None and time.time() - self.connect_at > 60:
+            self.mark_disconnected()
         return self.disconnect_at is None
     def reconnect(self, client, info):
         self.info = info
@@ -36,11 +37,13 @@ class Session:
             self.http_queue = None
         elif self.type == 'http':
             self.http_queue = client
+            self.ws_client = None
         self.connect_at = time.time()
         self.disconnect_at = None
     def mark_disconnected(self):
-        if self.is_active(): log(f"Tab disconnected: {self.url} (Session: {self.id})")
-        self.disconnect_at = time.time()
+        if self.disconnect_at is None:
+            log(f"Tab disconnected: {self.url} (Session: {self.id})")
+            self.disconnect_at = time.time()
 
 
 class UserContext:
@@ -92,7 +95,7 @@ class TokenManager:
             expired = [t for t, ctx in self.contexts.items()
                        if time.time() - ctx.last_active > max_idle and t != '__default__']
             for t in expired:
-                _tlog(t, f"[TokenManager] Cleaning expired context")
+                _tlog(t, "[TokenManager] Cleaning expired context")
                 del self.contexts[t]
 
 
@@ -242,7 +245,8 @@ class TMWebDriver:
                             session_id = str(tab['id'])
                             session_info = {'url': tab.get('url'), 'title': tab.get('title', ''), 'connected_at': time.time(), 'type': 'ext_ws'}
                             sess = ctx.sessions.get(session_id)
-                            if sess and sess.is_active(): sess.info = session_info
+                            if sess and sess.is_active() and sess.ws_client is self:
+                                sess.info = session_info
                             else: driver._register_client(session_id, self, session_info, token=token)
                     elif data.get('type') == 'ack':
                         token = getattr(self, '_token', '__default__')
@@ -413,7 +417,12 @@ class TMWebDriver:
         _tlog(token, f"成功设置默认会话: {ctx.default_session_id}: {info['url']}")
         return ctx.default_session_id
 
-    def jump(self, url, timeout=10, token=None): self.execute_js(f"window.location.href='{url}'", timeout=timeout, token=token)
+    def jump(self, url, timeout=10, token=None):
+        self.execute_js(
+            f"window.location.href = {json.dumps(url, ensure_ascii=False)}",
+            timeout=timeout,
+            token=token,
+        )
     
 if __name__ == "__main__":
     driver = TMWebDriver(host='127.0.0.1', port=18765)

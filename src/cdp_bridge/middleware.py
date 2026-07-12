@@ -19,10 +19,13 @@ class TokenAuthMiddleware(BaseHTTPMiddleware):
         else:
             token = request.query_params.get("token", "")
 
-        # Validate token if whitelist is configured
-        if token:
-            d = get_driver()
-            if d.multi_user and d.token_manager.allowed_tokens and not d.token_manager.validate(token):
+        # A configured whitelist is authentication, so missing credentials must
+        # not silently fall back to the shared default context.
+        d = get_driver()
+        if d.multi_user and d.token_manager.allowed_tokens:
+            if not token:
+                return JSONResponse({"error": "Missing bearer token"}, status_code=401)
+            if not d.token_manager.validate(token):
                 return JSONResponse({"error": "Invalid token"}, status_code=403)
 
         # Set token in ContextVar for downstream tool functions
