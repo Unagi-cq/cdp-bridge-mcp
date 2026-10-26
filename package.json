@@ -1,0 +1,36 @@
+{
+  "name": "cdp-bridge-ohos",
+  "version": "0.1.0",
+  "description": "在 OpenHarmony / 国产 Chromium 内核（无 eval、扩展 API 部分挂起）上可用的浏览器自动化 MCP 桥。Node 零依赖重写原版 CDP Bridge MCP；扩展使用 content script 结构化 DOM 命令（无 eval）驱动真实已登录页面。",
+  "main": "src/mcp-stdio.js",
+  "bin": {
+    "cdp-bridge-ohos": "src/mcp-stdio.js"
+  },
+  "scripts": {
+    "start": "node src/mcp-stdio.js",
+    "bridge": "node src/bridge-server.js",
+    "smoke": "node examples/01-mcp-smoke.js",
+    "e2e": "node examples/02-e2e-basic.js",
+    "fake-ext": "node examples/03-fake-extension.js",
+    "install:workbuddy": "node scripts/install-workbuddy.js"
+  },
+  "keywords": [
+    "mcp",
+    "browser",
+    "automation",
+    "openharmony",
+    "harmonyos",
+    "chrome-extension",
+    "cdp"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "src/",
+    "examples/",
+    "README.md",
+    "LICENSE"
+  ]
+}

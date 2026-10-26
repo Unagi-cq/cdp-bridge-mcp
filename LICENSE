@@ -1,6 +1,10 @@
 MIT License
 
-Copyright (c) 2026 cq_huang
+本项目（cdp-bridge-ohos）是原项目 CDP Bridge MCP 的鸿蒙（OpenHarmony）适配版，
+随附的本许可证同时涵盖改编代码与对原插件代码的修改部分。
+
+Copyright (c) 2026 cq_huang            （原项目 CDP Bridge MCP 版权所有者）
+Copyright (c) 2026 cdp-bridge-ohos contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +23,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+原项目：CDP Bridge MCP · https://github.com/Unagi-cq/cdp-bridge-mcp

@@ -1,0 +1,65 @@
+{
+  "manifest_version": 3,
+  "name": "CDP Bridge for Agents",
+  "version": "0.2.0",
+  "description": "为 LLM / Agent 设计的浏览器插件：让 AI 读取页面、点击元素、填写表单、截图、切换标签页，自动化网页操作。支持鸿蒙 PC 国产内核浏览器。",
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "debugger",
+    "scripting",
+    "alarms",
+    "declarativeNetRequest",
+    "management",
+    "contentSettings",
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png",
+    "256": "icons/icon-256.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "disable_dialogs.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "config.js",
+        "content.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "action": {
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png",
+      "256": "icons/icon-256.png"
+    },
+    "default_popup": "popup.html",
+    "default_title": "CDP Bridge for Agents"
+  }
+}

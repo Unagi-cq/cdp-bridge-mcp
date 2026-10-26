@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+*{box-sizing:border-box}
+html,body{width:420px;margin:0;overflow:hidden;}
+body{display:flex;padding:14px;background:#f6f7f9;color:#182033;font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}
+.shell{display:flex;flex:1;min-height:0;flex-direction:column;border:1px solid rgba(18,24,38,.08);border-radius:14px;background:#fff;box-shadow:0 10px 28px rgba(18,24,38,.10);overflow:hidden;}
+.header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 14px 12px;border-bottom:1px solid rgba(18,24,38,.07);}
+.title{display:flex;align-items:center;gap:9px;min-width:0;}
+.icon{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:#eef8f3;color:#168456;font-weight:700;}
+h1{margin:0;font-size:14px;line-height:1.2;font-weight:650;}
+.subtitle{margin-top:2px;color:#6b7280;font-size:12px;}
+button{height:30px;border:0;border-radius:8px;padding:0 12px;background:#182033;color:#fff;font:600 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;cursor:pointer;transition:background .15s ease,transform .15s ease,box-shadow .15s ease;}
+button:hover{background:#263047;box-shadow:0 6px 14px rgba(18,24,38,.16)}
+button:active{transform:translateY(1px);box-shadow:none}
+.status{display:flex;align-items:center;gap:10px;padding:9px 14px;color:#5f6b7a;font-size:12px;background:#fbfcfd;}
+.dot{width:7px;height:7px;border-radius:50%;background:#18a058;box-shadow:0 0 0 3px rgba(24,160,88,.12);}
+.status-left{display:flex;align-items:center;gap:8px;min-width:0;}
+.config{display:grid;grid-template-columns:1fr 92px;gap:8px;padding:12px 14px;border-bottom:1px solid rgba(18,24,38,.07);background:#fbfcfd;}
+.config label{display:block;color:#5f6b7a;font-size:11px;margin-bottom:3px;}
+.config input{width:100%;height:28px;border:1px solid rgba(18,24,38,.14);border-radius:7px;padding:0 8px;font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}
+.config .full{grid-column:1 / -1;}
+.preview{grid-column:1 / -1;color:#6b7280;font:12px ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="header">
+    <div class="title">
+      <div class="icon">C</div>
+      <div>
+        <h1>CDP Bridge</h1>
+        <div class="subtitle">Bridge connection settings</div>
+      </div>
+    </div>
+  </div>
+  <div class="config">
+    <div><label>Bridge Host</label><input id="bridgeHost" placeholder="127.0.0.1"></div>
+    <div><label>Port</label><input id="bridgePort" type="number" min="1" max="65535" placeholder="optional"></div>
+    <div class="full"><label>Token (http模式下的用户标识)</label><div style="display:flex;gap:6px;"><input id="bridgeToken" placeholder="optional" style="flex:1"><button id="genToken" style="width:auto;padding:0 10px;font-size:11px;background:#4f5d73;">随机</button></div></div>
+    <div id="wsPreview" class="preview">ws://127.0.0.1:18765</div>
+    <button id="saveBridge" class="full">保存连接配置</button>
+  </div>
+  <div class="config" style="border-bottom:none;">
+    <div class="full" style="display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:13px;font-weight:500;">页面浮标</span>
+      <button id="toggleBadge" style="background:#4f5d73;">隐藏浮标</button>
+    </div>
+    <div class="full" style="color:#6b7280;font-size:11px;">右下角的 CDP Bridge 连接状态浮标</div>
+  </div>
+  <div class="status">
+    <div class="status-left"><span class="dot"></span><span id="state">Ready</span></div>
+  </div>
+</div>
+<script src="popup.js"></script>
+</body>
+</html>
