@@ -4,7 +4,7 @@ CDP Bridge MCP · [English](./doc/README_EN.md)
 
 ![两个 Chrome Profile 打开同一个订单后台，分别读回 North Studio 的 12 单和 South Studio 的 7 单](./doc/demo/two-profiles.gif)
 
-20 秒演示：两个本地测试账号打开相同的网址。上方是两个 Profile 的实际页面，下方是各自 MCP 请求读回的结果。
+20 秒演示：两个本地测试账号打开相同的网址。蓝线和橙线标出演示请求各自的路径；两张订单页和读回的结果取自实际 MCP 测试。
 
 ## 快速安装 · 读出第一个标签页
 
