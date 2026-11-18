@@ -1,60 +1,53 @@
-<p align="center">
-  <img src="../images/icon.png" alt="CDP Bridge MCP Icon" width="120" height="120" />
-</p>
+# Use one AI workspace across multiple signed-in Chrome accounts
 
-<h1 align="center">CDP Bridge MCP</h1>
+[中文](../README.md) · CDP Bridge MCP
 
-<div align="center">
+![Two Chrome profiles open the same orders dashboard. North Studio returns 12 open orders and South Studio returns 7.](./demo/two-profiles.gif)
 
-[![PyPI](https://img.shields.io/pypi/v/cdp-bridge?label=PyPI)](https://pypi.org/project/cdp-bridge/)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![MCP](https://img.shields.io/badge/MCP-Browser%20Bridge-green)](https://modelcontextprotocol.io/)
-[![GitHub](https://img.shields.io/badge/GitHub-Unagi--cq%2Fcdp--bridge--mcp-black)](https://github.com/Unagi-cq/cdp-bridge-mcp)
+Two local demo accounts share the same dashboard URL. The 20-second walkthrough pairs screenshots from separate Chrome profiles with the results of two MCP requests.
 
-</div>
+## Quick install · read your first tab
 
-<p align="center">
-CDP Bridge MCP is a bridge service that connects MCP clients to real browser sessions. Through its companion Chromium extension, any LLM client can seamlessly list tabs, scan pages, execute automation, capture screenshots, and navigate pages.
-</p>
+1. Open a terminal in your Claude Code project. You’ll need [Claude Code](https://code.claude.com/docs/en/quickstart), [uv](https://docs.astral.sh/uv/getting-started/installation/) and a Chrome profile for testing. The extension can read and act on pages in that profile. Version 0.1.25 also removes Content Security Policy headers for frames in that profile.
+2. [Download the Chrome extension ZIP · v0.1.25](https://github.com/Unagi-cq/cdp-bridge-mcp/releases/download/v0.1.25/cdp-bridge-extension-0.1.25.zip). Extract it to a folder you can keep. Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the folder containing `manifest.json`. Open a regular website in that profile.
+3. Register the MCP server in your project, then start a new Claude Code session there and approve the project MCP connection when prompted.
 
-<p align="center">
-<a href="../README.md">中文</a> | English
-</p>
+```sh
+claude mcp add --scope project --transport stdio cdp-bridge -- uvx cdp-bridge==0.1.25
+```
 
-# Demo Videos
+Ask Claude Code:
+
+> List my current browser tabs and tell me their titles.
+
+Look for the title of the page you opened. Below is one tab from an actual `browser_get_tabs` response. If the list is empty, leave the site open, wait for the extension to reconnect, and ask again.
+
+![A returned tab titled Orders · North Studio](./demo/first-tab.png)
+
+## Try two accounts on one computer
+
+Close the single-profile Claude Code session first. In two Chrome profiles, load the extension and sign into different demo accounts on the same site. In each extension popup, set **Port** to `19245` and save a different **Token**. The local demo uses `north` and `south`.
+
+Start the shared local service and leave it running.
+
+```sh
+uvx cdp-bridge==0.1.25 --transport streamable-http --port 19240 --ws-port 19245 --tokens north,south
+```
+
+In a fresh project directory, register both connections. Open Claude Code there and enable both servers.
+
+```sh
+claude mcp add --scope project --transport http north http://127.0.0.1:19240/mcp --header "Authorization: Bearer north"
+claude mcp add --scope project --transport http south http://127.0.0.1:19240/mcp --header "Authorization: Bearer south"
+```
+
+> Use the north and south connections to read the dashboard account name and open order count on each. List the results separately.
+
+## More demos
 
 | Multi-account operations on Xiaohongshu from a single machine | Search Anthropic updates on Xiaohongshu | Read CSDN author analytics |
 |---------------------------------------------------------------|------------------------------------------|-----------------------------|
 | [Watch video](https://www.bilibili.com/video/BV1RDRQBrEY7) | [Watch video](https://www.bilibili.com/video/BV1RDRQBrEY7/?p=3) | [Watch video](https://www.bilibili.com/video/BV1RDRQBrEY7/?p=2) |
-
-# Introduction
-
-CDP Bridge MCP is designed for scenarios where large language models need to operate a real browser. **Unlike stateless HTTP fetching, it connects to browser pages that are already open and already logged in, so it can reuse the browser's login state, cookies, page state, and rendered frontend result.**
-
-CDP Bridge MCP also supports multi-profile operations on a single machine and multi-user operations.
-
-Repository: <https://github.com/Unagi-cq/cdp-bridge-mcp>
-
-> This project is written and distributed in Python. MCP supports two transport modes: `stdio` and `streamable-http`.
-
-# Project Advantages
-
-**Why use CDP Bridge MCP instead of Playwright MCP, Kimi Bridge, or Chrome DevTools MCP?**
-
-Playwright MCP and Chrome DevTools MCP are both powerful, but they are more oriented toward automated testing, debugging protocols, or newly launched browser instances. Kimi Bridge has a more limited permission model and tends to rely on screenshots sent to vision models.
-
-CDP Bridge MCP has a different goal: it focuses on letting LLMs or Agent products take over the real browser session the user is already using.
-
-- **Reuse real login state**: CDP Bridge MCP connects to browser tabs that are already open and logged in. For many account-based websites, there is no need to log in again or manually transfer cookies.
-- **Better for everyday browser collaboration**: Playwright is a strong fit for repeatable, scriptable automation workflows, while CDP Bridge MCP is better suited for interactive tasks where an LLM reads, analyzes, checks before clicking, executes scripts, and takes screenshots on the user's current page.
-- **Page content is optimized for LLMs**: `browser_scan` simplifies page HTML by filtering scripts, styles, and invisible elements while preserving useful text, controls, and structure, reducing token waste.
-- **Lightweight startup flow**: Once published to PyPI, the server can be started with `uvx cdp-bridge`. The browser side only needs the extension to be loaded. No Playwright scripts or per-instance debug configuration required.
-- **Built for remote deployment and Agent product development**: In `streamable-http` mode, `cdp-bridge` can run as a persistent service on a remote server. The Agent backend connects through the MCP HTTP endpoint, while the user's browser extension connects to the same service through WebSocket. This means the product side does not need to host the user's browser or move account state to the cloud. The user simply installs the extension and configures `Bridge Host`, `Port`, and `Token`, and the Agent can read, analyze, and automate within the user's authorized real browser session.
-- **Multi-profile parallel connections on the same machine**: If you open multiple Chrome/Chromium profiles on the same computer and configure each extension with a different token, they are isolated into separate session spaces by the server. This means you can run multiple accounts on the same platform simultaneously, with each operated by an Agent in its own real browser page.
-- **Multi-user concurrent access from different machines**: Browser extensions on different users' machines can all connect to the same `streamable-http` service. As long as each uses a different token, they work in parallel without interfering with each other. Ideal for customer support desks, operations teams, data collection nodes, or remote collaboration scenarios.
-- **Covers both personal use and team products**: Individual users can quickly connect their local browser with the default `stdio + 127.0.0.1:18765` setup. Teams and product developers can use `streamable-http + remote domain + WebSocket + token` to build a browser-control channel and integrate real-browser capabilities into their Agent products, support workbenches, data collection backends, or internal automation systems.
-
-So if your goal is to let a model control a dedicated automation browser, Playwright MCP is a good fit. If your goal is to debug Chrome or work closely with the DevTools protocol, Chrome DevTools MCP is a good fit. If your goal is to let a model or Agent product read and operate on the real browser page the user is currently using, CDP Bridge MCP is closer to that scenario.
 
 ## System Architecture
 
@@ -141,48 +134,6 @@ The MCP service currently exposes 12 tools:
 | `browser_save_image` | `screenshot_json_str_or_file` (str, required), `output_path` (str) | Save the base64 screenshot data from `browser_screenshot` as a local PNG file. `screenshot_json_str_or_file` is the screenshot JSON string or JSON file path; `output_path` is the output file path or directory |
 
 For semantic actions, call `browser_observe`, select a control `ref`, then pass its `tab_id` and `page_revision` to `browser_act`. Observe again after each action. The current version covers the main document and open Shadow DOM; controls inside iframes are not included.
-
-# Quick Start
-
-This is the fastest path with the default setup:
-
-1. Install `uv`.
-2. Open `chrome://extensions/` in Chrome or another Chromium browser and enable "Developer mode".
-3. Click "Load unpacked" and select the `src/cdp_bridge/tmwd_cdp_bridge` folder.
-4. Add `cdp-bridge` to your MCP client.
-
-Configure MCP in any client:
-
-```json
-{
-  "mcpServers": {
-    "cdp-bridge": {
-      "command": "uvx",
-      "args": ["cdp-bridge@latest"]
-    }
-  }
-}
-```
-
-After configuration, open any page in the browser, then ask the LLM client to perform web operations. The extension will automatically connect to the WebSocket service started by the MCP process. If you see `ERR_CONNECTION_REFUSED` on first use, wait a few seconds for the automatic reconnect.
-
-# Detailed Usage
-
-## Installation Steps
-
-1. Load the browser extension folder `src/cdp_bridge/tmwd_cdp_bridge` into Chrome or another Chromium-based browser.
-2. Configure CDP Bridge MCP in your MCP client.
-
-Then you're ready to go. The detailed steps are explained below.
-
-> **First use**: After loading the extension, the first WebSocket connection may show `ERR_CONNECTION_REFUSED`. This is expected. The extension has built-in automatic reconnect logic (probing about every 5 seconds) and will recover automatically once the backend service starts — no need to manually restart the extension.
-
-## Usage Flow
-
-1. **Load the browser extension** (see below)
-2. **Configure the MCP client** (see below)
-3. **Use any browser tool** (e.g. `browser_get_tabs`); the WebSocket service starts automatically with the MCP service
-4. The browser extension will connect within a few seconds, after which all tools are ready to use
 
 ## Load the Browser Extension
 
@@ -413,10 +364,10 @@ In this case, the `Token` field in the browser extension popup must also be set 
 
 ```bash
 # stdio mode
-claude mcp add cdp-bridge uvx cdp-bridge@latest
+claude mcp add --transport stdio cdp-bridge -- uvx cdp-bridge==0.1.25
 
 # streamable-http mode (start the service first, then register it)
-claude mcp add cdp-bridge --transport streamable-http http://127.0.0.1:8000/mcp
+claude mcp add --transport http cdp-bridge http://127.0.0.1:8000/mcp
 ```
 
 ### Codex

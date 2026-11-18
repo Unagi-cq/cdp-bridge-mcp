@@ -1,60 +1,53 @@
-<p align="center">
-  <img src="./images/icon.png" alt="CDP Bridge MCP Icon" width="120" height="120" />
-</p>
+# 让一个 AI 工作台分别操作多个已登录的 Chrome 账号
 
-<h1 align="center">CDP Bridge MCP</h1>
+CDP Bridge MCP · [English](./doc/README_EN.md)
 
-<div align="center">
+![两个 Chrome Profile 打开同一个订单后台，分别读回 North Studio 的 12 单和 South Studio 的 7 单](./doc/demo/two-profiles.gif)
 
-[![PyPI](https://img.shields.io/pypi/v/cdp-bridge?label=PyPI)](https://pypi.org/project/cdp-bridge/)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![MCP](https://img.shields.io/badge/MCP-Browser%20Bridge-green)](https://modelcontextprotocol.io/)
-[![GitHub](https://img.shields.io/badge/GitHub-Unagi--cq%2Fcdp--bridge--mcp-black)](https://github.com/Unagi-cq/cdp-bridge-mcp)
+20 秒演示：两个本地测试账号打开相同的网址。上方是两个 Profile 的实际页面，下方是各自 MCP 请求读回的结果。
 
-</div>
+## 快速安装 · 读出第一个标签页
 
-<p align="center">
-CDP Bridge MCP 是一个连接 MCP 客户端与真实浏览器会话的桥接服务，通过配套的 Chromium 插件接入浏览器页面，让任何大模型客户端都可以丝滑、轻易地读取标签页、扫描页面、执行自动化操作、截图和导航。
-</p>
+1. 准备一个用于试用的 Chrome Profile，在装有 [Claude Code](https://code.claude.com/docs/en/quickstart) 和 [uv](https://docs.astral.sh/uv/getting-started/installation/) 的电脑上打开项目终端。扩展可以读取和操作该 Profile 的页面，0.1.25 也会移除其中页面和子框架的 CSP 响应头。
+2. [下载 Chrome 扩展 ZIP · v0.1.25](https://github.com/Unagi-cq/cdp-bridge-mcp/releases/download/v0.1.25/cdp-bridge-extension-0.1.25.zip)，解压到一个可以保留的文件夹。打开 `chrome://extensions`，开启 **开发者模式**，选择 **加载已解压的扩展程序**，选中解压后包含 `manifest.json` 的目录。在这个 Profile 打开一个普通网页。
+3. 在项目终端执行下面的命令，然后在同一目录新开 Claude Code 会话，按提示启用项目的 MCP 连接。
 
-<p align="center">
-中文 | <a href="./doc/README_EN.md">English</a>
-</p>
+```sh
+claude mcp add --scope project --transport stdio cdp-bridge -- uvx cdp-bridge==0.1.25
+```
 
-# 演示视频
+复制到 Claude Code：
+
+> 列出当前浏览器标签页，告诉我标题。
+
+看到刚才打开的网页标题就成功了。下图展示了一次真实 `browser_get_tabs` 返回中的一个标签页。如果列表为空，保持网页打开，等扩展自动重连后再问一次。
+
+![实测返回的标签页标题 Orders · North Studio](./doc/demo/first-tab.png)
+
+## 接着试双账号
+
+先退出刚才的单账号 Claude Code 会话。在两个 Chrome Profile 里分别加载扩展，用不同测试账号登录同一个网站。在两个扩展弹窗中把 **Port** 都设为 `19245`，**Token** 分别填 `north`、`south`，点击保存连接配置。
+
+在一个终端启动本地服务并保持运行。
+
+```sh
+uvx cdp-bridge==0.1.25 --transport streamable-http --port 19240 --ws-port 19245 --tokens north,south
+```
+
+在另一个终端进入新的项目目录，添加两条连接。在该目录启动 Claude Code，启用这两项服务。
+
+```sh
+claude mcp add --scope project --transport http north http://127.0.0.1:19240/mcp --header "Authorization: Bearer north"
+claude mcp add --scope project --transport http south http://127.0.0.1:19240/mcp --header "Authorization: Bearer south"
+```
+
+> 分别用 north 和 south 连接读取各自后台上的账号名和待处理订单数，分两行告诉我结果。
+
+## 更多演示
 
 | 单台电脑多个小红书账号同时操作                                     | 查询小红书平台 Anthropic 最新动态                                   | 读取 CSDN 网站作者后台数据分析                                       |
 |-----------------------------------------------------|----------------------------------------------------------|----------------------------------------------------------|
 | [观看视频](https://www.bilibili.com/video/BV1RDRQBrEY7) | [观看视频](https://www.bilibili.com/video/BV1RDRQBrEY7/?p=3) | [观看视频](https://www.bilibili.com/video/BV1RDRQBrEY7/?p=2) |
-
-# 项目介绍
-
-CDP Bridge MCP 适合需要让大模型操作真实浏览器的场景。**和无状态 HTTP 抓取不同，它连接的是你已经登录、已经打开的浏览器页面，因此可以复用真实浏览器里的登录态、Cookie、页面状态和前端渲染结果。**
-
-CDP Bridge MCP 还支持在单台电脑多Profile操作，也支持多用户操作。
-
-代码仓库：<https://github.com/Unagi-cq/cdp-bridge-mcp>
-
-> 本项目使用 Python 编写并发布。MCP 支持 `stdio` 和 `streamable-http` 两种传输模式。
-
-# 项目优势
-
-**为什么用 CDP Bridge MCP，而不是 Playwright MCP、Kimi Bridge 或 Chrome DevTools MCP？**
-
-Playwright MCP 和 Chrome DevTools MCP 都很强，但它们更偏向“自动化测试 / 调试协议 / 新开浏览器实例”的工作流。Kimi Bridge 的功能权限有限，倾向于通过截图发给视觉模型来完成任务。
-
-CDP Bridge MCP 的目标不同：它更关注让 LLM 或 Agent 产品接管用户正在使用的真实浏览器会话。
-
-- **复用真实登录态**：CDP Bridge MCP 连接的是你已经打开、已经登录的浏览器标签页，很多需要账号态的网站，不需要重新登录或额外搬运 Cookie。
-- **更适合日常浏览器协作**：Playwright 更适合可重复、可脚本化的自动化流程，而 CDP Bridge MCP 更适合 LLM 在用户当前页面上做读取、分析、点击前判断、执行脚本、截图等交互式任务。
-- **页面内容更适合 LLM 消费**：`browser_scan` 会对页面 HTML 做简化，过滤脚本、样式和不可见元素，尽量保留对模型有用的正文、控件和结构信息，减少 token 浪费。
-- **启动链路轻量**：服务端发布到 PyPI 后可直接 `uvx cdp-bridge` 启动，浏览器端加载扩展即可连接，不需要编写 Playwright 脚本，也不需要为每个浏览器实例单独配置调试参数。
-- **适合远端部署和 Agent 产品开发**：如果使用 `streamable-http` 模式，`cdp-bridge` 可以作为一个常驻服务部署在远端服务器上。Agent 后端通过 MCP HTTP 端点连接服务，用户浏览器里的扩展通过 WebSocket 连接同一个服务。这样产品侧不需要托管用户的浏览器，也不需要把账号态搬到云端；用户只要安装扩展并配置 `Bridge Host`、`Port` 和 `Token`，Agent 就能在用户授权的真实浏览器会话里完成读取、分析和自动化操作。
-- **支持同一台电脑的多个浏览器 Profile 并行连接**：如果你在同一台电脑上打开多个 Chrome / Chromium Profile，并分别给扩展配置不同 token，它们会被服务端隔离成不同会话空间。这意味着你可以在同一个平台上同时挂多个账号，并分别让 Agent 操作各自的真实浏览器页面。
-- **支持不同电脑上的多用户同时接入**：不同用户、不同电脑上的浏览器扩展都可以连接到同一个 `streamable-http` 服务，只要各自使用不同 token，就能并行工作且互不干扰。适合客服坐席、运营团队、数据采集节点或远程协作场景。
-- **个人使用和团队产品都能覆盖**：个人用户可以用默认 `stdio + 127.0.0.1:18765` 快速接入本机浏览器；团队或产品开发者可以用 `streamable-http + 远端域名 + WebSocket + token` 搭建浏览器控制通道，把真实浏览器能力集成进自己的 Agent 产品、客服工作台、数据采集后台或内部自动化系统。
-
-因此，如果你的目标是“让模型控制一个专门启动的自动化浏览器”，Playwright MCP 很合适；如果你的目标是“调试 Chrome 或精细操作 DevTools 协议”，Chrome DevTools MCP 很合适；如果你的目标是“让模型或 Agent 产品读取和操作用户当前正在使用的真实浏览器页面”，CDP Bridge MCP 更贴近这个场景。
 
 ## 系统架构
 
@@ -141,48 +134,6 @@ MCP 服务当前暴露以下 12 个工具：
 | `browser_save_image` | `screenshot_json_str_or_file` (str, 必填), `output_path` (str) | 将 `browser_screenshot` 返回的 base64 截图数据保存为本地 PNG 文件。`screenshot_json_str_or_file` 为截图 JSON 字符串或 JSON 文件路径；`output_path` 为输出路径或目录 |
 
 语义操作流程：先调用 `browser_observe`，从结果中选择控件的 `ref`，再把同一结果中的 `tab_id` 和 `page_revision` 传给 `browser_act`。操作后重新观察。当前版本支持页面主文档与开放的 Shadow DOM；iframe 内的控件尚未包含在结果中。
-
-# 快速使用
-
-下面是默认配置下最快的使用流程：
-
-1. 安装 `uv`。
-2. 在 Chrome 或其他 Chromium 浏览器中打开 `chrome://extensions/`，开启“开发者模式”。
-3. 点击“加载已解压的扩展程序”，选择 `src/cdp_bridge/tmwd_cdp_bridge` 文件夹。
-4. 在 MCP 客户端里添加 `cdp-bridge`。
-
-在任意客户端配置MCP：
-
-```json
-{
-  "mcpServers": {
-    "cdp-bridge": {
-      "command": "uvx",
-      "args": ["cdp-bridge@latest"]
-    }
-  }
-}
-```
-
-配置完成后，在浏览器里打开任意页面，然后在大模型客户端让模型执行网页操作即可。扩展会自动连接 MCP 进程启动的 WebSocket 服务；如果首次看到 `ERR_CONNECTION_REFUSED`，等待几秒自动重连即可。
-
-# 详细使用
-
-## 安装步骤
-
-1. 将项目中提供的浏览器插件 `src/cdp_bridge/tmwd_cdp_bridge` 文件夹加载到 Chrome 或其他 Chromium 浏览器。
-2. 在 MCP 客户端配置 CDP Bridge MCP。
-
-然后就可以正常使用了。下面详细介绍上述安装步骤。
-
-> **首次使用**：加载扩展后首次连接 WebSocket 会产生 `ERR_CONNECTION_REFUSED` 报错，这是正常的。扩展内置自动重连机制（每 ~5 秒探测一次），当检测到后端服务启动后会自动恢复连接，无需手动重启扩展。
-
-## 使用流程
-
-1. **加载浏览器扩展**（参考下方步骤）
-2. **配置 MCP 客户端**（参考下方步骤）
-3. **使用任意浏览器工具**（如 `browser_get_tabs`），MCP 服务启动后 WebSocket 服务会自动就绪
-4. 浏览器扩展会在数秒内自动连接，之后即可正常使用所有工具
 
 ## 加载浏览器
 
@@ -420,10 +371,10 @@ uvx cdp-bridge@latest --transport streamable-http --port 8000 --ws-port 18767
 
 ```bash
 # stdio 模式
-claude mcp add cdp-bridge uvx cdp-bridge@latest
+claude mcp add --transport stdio cdp-bridge -- uvx cdp-bridge==0.1.25
 
 # streamable-http 模式（先启动服务，再注册）
-claude mcp add cdp-bridge --transport streamable-http http://127.0.0.1:8000/mcp
+claude mcp add --transport http cdp-bridge http://127.0.0.1:8000/mcp
 ```
 
 **方式二：配置文件（推荐用于 streamable-http 模式）**
